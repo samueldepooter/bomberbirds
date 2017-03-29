@@ -165,7 +165,7 @@ const config = {
 
     ifDevelopment(new HotModuleReplacementPlugin()),
 
-    
+
 
     ifProduction(copy),
     ifProduction(extractCSS),

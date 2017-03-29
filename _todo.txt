@@ -1,0 +1,20 @@
+# TODO
+
+## Features
+
+- Chicken legs that animate when running around
+- Chicken only jumps when it moves or random when standing still
+- X-ray vision (wireframing) for players to find the bomber (has a red rectangle in his body)
+- Speed boost to run faster
+- 1 chicken automatically becomes the bomber
+- Custom chickens
+- Collision between chickens
+- Changes in terrain
+
+## Optimise
+
+- Better structure of chicken object
+- Animation handling
+-
+
+## Bugs
