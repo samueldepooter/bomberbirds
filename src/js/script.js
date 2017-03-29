@@ -4,17 +4,17 @@ import FlyControls from './lib/FlyControls';
 
 const chickens = [];
 
-const camera = {x: 0, y: 5, z: 10};
+const camera = {x: - 3, y: 2.5, z: - 3};
 
 const colors = {
-  player: {
+  chicken: {
     body: `#FFF`,
     mouth: `#FF9670`,
     wattle: `#FF6EA5`,
     eye: `#000`,
     wing: `#AEA1A8`,
     shadow: `#000`,
-    legs: `#FF9670`
+    leg: `#FF9670`
   },
   lights: {
     main: `#FFF`,
@@ -154,64 +154,78 @@ const createChicken = (font, pos = {x: 0, y: 0, z: 0}) => {
   this.controls.mouseToTurn = false;
 
   chicken.position.set(pos.x, pos.y, pos.z);
-  chicken.rotation.y = randomIntFromInterval(0, Math.PI * 2);
 
   chicken.userData = userData;
   chickens.push(chicken);
 
   // BODY
-  const bodyC = {w: 1, h: 1, depth: 1.5};
-  const body = new THREE.Mesh(new THREE.BoxGeometry(bodyC.w, bodyC.h, bodyC.depth), new THREE.MeshPhongMaterial({color: colors.player.body, shading: THREE.FlatShading}));
-  body.position.setY(bodyC.h / 2);
+  const bodySize = {w: 1, h: 1, depth: 1.5};
+  const body = box(bodySize, {x: 0, y: 1.5, z: 0}, colors.chicken.body);
   chicken.add(body);
 
   // HEAD
-  const headC = {w: 1, h: 1, depth: 1};
-  const head = new THREE.Mesh(new THREE.BoxGeometry(headC.w, headC.h, headC.depth), new THREE.MeshPhongMaterial({color: colors.player.body, shading: THREE.FlatShading}));
-  head.position.setY(bodyC.h + headC.h / 2);
-  head.position.setZ(- ((headC.depth / 2) - (bodyC.depth / 2) + (headC.depth / 2)));
-  chicken.add(head);
-
-  // WINGS
-  const wing = {w: .2, h: .5, depth: 1};
-
-  const wingLeft = new THREE.Mesh(new THREE.BoxGeometry(wing.w, wing.h, wing.depth), new THREE.MeshPhongMaterial({color: colors.player.wing, shading: THREE.FlatShading}));
-  wingLeft.position.set(- (bodyC.w / 2 + wing.w / 2), bodyC.h / 2, 0);
-  wingLeft.userData.part = `wingLeft`;
-
-  const wingRight = new THREE.Mesh(new THREE.BoxGeometry(wing.w, wing.h, wing.depth), new THREE.MeshPhongMaterial({color: colors.player.wing, shading: THREE.FlatShading}));
-  wingRight.position.set(bodyC.w / 2 + wing.w / 2, bodyC.h / 2, 0);
-  wingRight.userData.part = `wingRight`;
-
-  chicken.add(wingLeft);
-  chicken.add(wingRight);
-
-  // MOUTH
-  const mouthC = {w: .3, h: .3, depth: .5};
-  const mouth = new THREE.Mesh(new THREE.BoxGeometry(mouthC.w, mouthC.h, mouthC.depth), new THREE.MeshPhongMaterial({color: colors.player.mouth, shading: THREE.FlatShading}));
-  mouth.position.set(0, head.position.y, - (bodyC.depth / 2 + mouthC.depth / 2));
-  chicken.add(mouth);
-
-  // WATTLE
-  const wattleC = {w: .3, h: .3, depth: .3};
-  const wattle = new THREE.Mesh(new THREE.BoxGeometry(wattleC.w, wattleC.h, wattleC.depth), new THREE.MeshPhongMaterial({color: colors.player.wattle, shading: THREE.FlatShading}));
-  wattle.position.set(0, head.position.y - wattleC.h, - (bodyC.depth / 2 + wattleC.depth / 2));
-  chicken.add(wattle);
+  const headSize = {w: 1, h: 1, depth: 1};
+  const head = box(headSize, {x: 0, y: bodySize.h, z: - ((headSize.depth / 2) - (bodySize.depth / 2) + (headSize.depth / 2))}, colors.chicken.body);
+  body.add(head);
 
   // EYES
-  const eyeC = {w: .1, h: .1, depth: .1};
+  const eyeSize = {w: .1, h: .1, depth: .1};
+  const eyeLeft = box(eyeSize, {x: - headSize.w / 2, y: head.position.y, z: head.position.z}, colors.chicken.eye);
+  body.add(eyeLeft);
 
-  const eyeLeft = new THREE.Mesh(new THREE.BoxGeometry(eyeC.w, eyeC.h, eyeC.depth), new THREE.MeshBasicMaterial({color: colors.player.eye}));
-  eyeLeft.position.set(- headC.w / 2, head.position.y, head.position.z);
+  const eyeRight = box(eyeSize, {x: headSize.w / 2, y: head.position.y, z: head.position.z}, colors.chicken.eye);
+  body.add(eyeRight);
 
-  const eyeRight = new THREE.Mesh(new THREE.BoxGeometry(eyeC.w, eyeC.h, eyeC.depth), new THREE.MeshBasicMaterial({color: colors.player.eye}));
-  eyeRight.position.set(headC.w / 2, head.position.y, head.position.z);
-  chicken.add(eyeRight);
-  chicken.add(eyeLeft);
+  // MOUTH
+  const mouthSize = {w: .3, h: .3, depth: .5};
+  const mouth = box(mouthSize, {x: 0, y: head.position.y, z: - 1}, colors.chicken.mouth);
+  body.add(mouth);
+
+  // WATTLE
+  const wattleSize = {w: .3, h: .3, depth: .3};
+  const wattle = box(wattleSize, {x: 0, y: head.position.y - wattleSize.h, z: - (bodySize.depth / 2 + wattleSize.depth / 2)}, colors.chicken.wattle);
+  body.add(wattle);
+
+  // WINGS
+  const wingSize = {w: .2, h: .5, depth: 1};
+  const wingLeft = box(wingSize, {x: - (bodySize.w / 2 + wingSize.w / 2), y: body.position.y, z: 0}, colors.chicken.wing);
+  wingLeft.userData.part = `wingLeft`;
+  chicken.add(wingLeft);
+
+  const wingRight = box(wingSize, {x: bodySize.w / 2 + wingSize.w / 2, y: body.position.y, z: 0}, colors.chicken.wing);
+  wingRight.userData.part = `wingRight`;
+  chicken.add(wingRight);
+
+  // LEGS
+  const legs = new THREE.Object3D();
+  legs.userData.part = `legs`;
+  legs.position.setY(1);
+
+  const legLeftObj = new THREE.Object3D();
+  legLeftObj.userData.part = `legLeft`;
+  legLeftObj.position.setX(- .3);
+  legs.add(legLeftObj);
+
+  const legRightObj = new THREE.Object3D();
+  legRightObj.userData.part = `legRight`;
+  legRightObj.position.setX(.3);
+  legs.add(legRightObj);
+
+  const legSize = {w: .1, h: 1, depth: .1};
+  const legLeft = box(legSize, {x: 0, y: - legSize.h / 2, z: 0}, colors.chicken.leg);
+  const legRight = box(legSize, {x: 0, y: - legSize.h / 2, z: 0}, colors.chicken.leg);
+
+  legLeftObj.add(legLeft);
+  legRightObj.add(legRight);
+
+  //legLeftObj.rotation.x = - Math.PI / 4;
+  //legRightObj.rotation.x = Math.PI / 4;
+
+  chicken.add(legs);
 
   // SHADOW
   const shadowRadius = 1;
-  const shadow = new THREE.Mesh(new THREE.CircleGeometry(shadowRadius, 32), new THREE.MeshBasicMaterial({color: colors.player.shadow, depthWrite: false, side: THREE.DoubleSide, transparent: true, opacity: .25}));
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(shadowRadius, 32), new THREE.MeshBasicMaterial({color: colors.chicken.shadow, depthWrite: false, side: THREE.DoubleSide, transparent: true, opacity: .25}));
   shadow.userData.part = `shadow`;
   shadow.userData.radius = shadowRadius;
   shadow.userData.randomShadowAdd = 0.001;
@@ -222,6 +236,16 @@ const createChicken = (font, pos = {x: 0, y: 0, z: 0}) => {
   this.scene.add(chicken);
 
   addTextToChicken(chicken, head, font);
+};
+
+const box = (size, position, color) => {
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(size.w, size.h, size.depth),
+    new THREE.MeshPhongMaterial({color: color, shading: THREE.FlatShading})
+  );
+
+  mesh.position.set(position.x, position.y, position.z);
+  return mesh;
 };
 
 const findObject = (parent, obj) => {
@@ -336,9 +360,11 @@ const animateChickenWing = (wing, delay) => {
   });
 };
 
+/*
 const randomIntFromInterval = (min, max) => {
   return Math.floor(Math.random() * (max - min + 1) + min);
 };
+*/
 
 const render = () => {
   this.renderer.render(this.scene, this.camera);
