@@ -1,13 +1,6 @@
 import * as THREE from 'three';
 import TweenMax from 'gsap';
-
-const keys = {
-  Z: 90,
-  S: 83,
-  Q: 81,
-  D: 68,
-  SHIFT: 16
-};
+import keys from '../global/keys';
 
 const FlyControls = function (object, domElement) {
 
@@ -36,38 +29,41 @@ const FlyControls = function (object, domElement) {
 
     const key = event.keyCode;
 
-    if (key === keys.SHIFT) {
-      this.movementSpeedMultiplier = .1;
-    }
+    switch (key) {
 
-    if (key === keys.Z) {
+    case keys.SHIFT:
+      this.movementSpeedMultiplier = .1;
+      break;
+
+    case keys.Z:
       TweenMax.to(this.moveState, .5, {
         forward: 1,
         onUpdate: () => {
           this.updateMovementAndRotationVector();
         }
       });
-    }
+      break;
 
-    if (key === keys.S) {
+    case keys.S:
       TweenMax.to(this.moveState, .5, {
         back: .5,
         onUpdate: () => this.updateMovementAndRotationVector()
       });
-    }
+      break;
 
-    if (key === keys.Q) {
+    case keys.Q:
       TweenMax.to(this.moveState, .5, {
         yawLeft: .75,
         onUpdate: () => this.updateMovementAndRotationVector()
       });
-    }
+      break;
 
-    if (key === keys.D) {
+    case keys.D:
       TweenMax.to(this.moveState, .5, {
         yawRight: .75,
         onUpdate: () => this.updateMovementAndRotationVector()
       });
+      break;
     }
   };
 
@@ -75,90 +71,38 @@ const FlyControls = function (object, domElement) {
 
     switch (event.keyCode) {
 
-    case 16:
-      // shift
+    case keys.SHIFT:
       this.movementSpeedMultiplier = 1;
       break;
 
-    case 90:
-      // Z
+    case keys.Z:
       TweenMax.to(this.moveState, .5, {
         forward: 0,
         onUpdate: () => this.updateMovementAndRotationVector()
       });
       break;
 
-    case 83:
-      // S
+    case keys.S:
       TweenMax.to(this.moveState, .5, {
         back: 0,
         onUpdate: () => this.updateMovementAndRotationVector()
       });
       break;
 
-    case 81:
-      // Q
+    case keys.Q:
       TweenMax.to(this.moveState, .5, {
-        //left: 0,
         yawLeft: 0,
         onUpdate: () => this.updateMovementAndRotationVector()
       });
       break;
 
-    case 68:
-      // D
+    case keys.D:
       TweenMax.to(this.moveState, .5, {
         //right: 0,
         yawRight: 0,
         onUpdate: () => this.updateMovementAndRotationVector()
       });
       break;
-
-    case 37:
-      // left
-      TweenMax.to(this.moveState, .5, {
-        yawLeft: 0,
-        onUpdate: () => this.updateMovementAndRotationVector()
-      });
-      break;
-
-    case 39:
-      // right
-      TweenMax.to(this.moveState, .5, {
-        yawRight: 0,
-        onUpdate: () => this.updateMovementAndRotationVector()
-      });
-      break;
-
-    /*
-    case 65:
-      // A
-      this.moveState.rollLeft = 0;
-      break;
-    case 69:
-      // E
-      this.moveState.rollRight = 0;
-      break;
-
-    case 38:
-      //up
-      this.moveState.pitchUp = 0;
-      break;
-    case 40:
-      //down
-      this.moveState.pitchDown = 0;
-      break;
-
-    case 82:
-      // R
-      this.moveState.up = 0;
-      break;
-    case 70:
-      //F
-      this.moveState.down = 0;
-      break;
-    */
-
     }
   };
 

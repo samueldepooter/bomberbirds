@@ -1,6 +1,6 @@
 //const OrbitControls = require(`three-orbit-controls`)(THREE);
 import FlyControls from './lib/FlyControls';
-import {TweenMax, Power2, TimelineMax} from 'gsap';
+import {TweenMax, Power2, Circ, TimelineMax} from 'gsap';
 
 const mouse = {x: 0, y: 0};
 
@@ -9,6 +9,7 @@ const totalChickens = 100;
 const playerChicken = 0;
 
 const camera = {x: 0, y: 5, z: 10};
+const moveCameraWithJump = false;
 
 const colors = {
   chicken: {
@@ -27,6 +28,10 @@ const colors = {
   skybox: `#69CEEC`,
   ground: `#81DD7A`
 };
+
+let you = {};
+
+const keyPressed = [];
 
 const init = () => {
 
@@ -55,7 +60,9 @@ const init = () => {
   document.addEventListener(`mousedown`, onMouseDown);
   document.addEventListener(`mouseup`, onMouseUp);
   document.addEventListener(`mousemove`, onMouseMove);
+
   document.addEventListener(`keydown`, onKeyDown);
+  document.addEventListener(`keyup`, onKeyUp);
 
   /* LIGHTS */
   const mainLight = new THREE.DirectionalLight(colors.lights.main, 1);
@@ -116,6 +123,7 @@ const addTextToChicken = (chicken, relativeObject, font) => {
 };
 
 const onMouseMove = e => {
+
   e.preventDefault();
 
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -123,24 +131,10 @@ const onMouseMove = e => {
 };
 
 const onMouseDown = e => {
+
   e.preventDefault();
 
-  const shadow = findObject(this.player, `shadow`);
-  animateChickenFly(this.player, shadow, 0);
-  // console.log(this.controls.mousedown);
-
-  // if (player.userData.flying) return;
-  // player.userData.flying = true;
-
-  // const speed = .2;
-  // const start = 180;
-  // const end = 0;
-
-  // TweenMax.to(player.position, .5, {
-  //   y: player.position.y + 2,
-  //   ease: Power2.easeInOut,
-  //   onComplete: () => player.userData.flying = false
-  // });
+  animateChickenFly(this.player, you.shadow, 0);
 
 };
 
@@ -149,14 +143,89 @@ const onMouseUp = e => {
 };
 
 const onKeyDown = e => {
+
   e.preventDefault();
+  const key = e.key;
 
-  const key = e.keyCode;
+  keyPressed[key] = true;
 
-  if (key === 32) {
-    const shadow = findObject(this.player, `shadow`);
-    animateChickenFly(this.player, shadow, 0);
+  // switch (key) {
+  //
+  // case `z`:
+  //   break;
+  // }
+
+};
+
+const onKeyUp = e => {
+
+  e.preventDefault();
+  const key = e.key;
+
+  keyPressed[key] = false;
+
+  switch (key) {
+
+  case `z`:
+    stopChickenWalk(.2);
+    break;
+
+  case `s`:
+    stopChickenWalk(.2);
+    break;
   }
+
+};
+
+const stopChickenWalk = speed => {
+
+  you.legs.walking = false;
+
+  TweenMax.to(you.legs.left.rotation, speed, {
+    x: THREE.Math.degToRad(0),
+    ease: Power2.easeInOut
+  });
+
+  TweenMax.to(you.legs.right.rotation, speed, {
+    x: THREE.Math.degToRad(0),
+    ease: Power2.easeInOut
+  });
+};
+
+const animateChickenWalk = (chicken, reverse = false) => {
+
+  if (chicken === this.player) chicken = you;
+
+  if (chicken.legs.walking) return;
+  chicken.legs.walking = true;
+
+  const speed = .2;
+  const angle = 20;
+
+  TweenMax.to(chicken.legs.left.rotation, reverse ? speed * 2 : speed, {
+    x: reverse ? THREE.Math.degToRad(angle) : THREE.Math.degToRad(- angle),
+    ease: Power2.easeInOut,
+    onComplete: () => {
+      TweenMax.to(you.legs.left.rotation, reverse ? speed * 2 : speed, {
+        x: reverse ? THREE.Math.degToRad(- angle) : THREE.Math.degToRad(angle),
+        ease: Power2.easeInOut,
+        onComplete: () => chicken.legs.walking = false
+      });
+    }
+  });
+
+  TweenMax.to(chicken.legs.right.rotation, reverse ? speed * 2 : speed, {
+    x: reverse ? THREE.Math.degToRad(- angle) : THREE.Math.degToRad(angle),
+    ease: Power2.easeInOut,
+    onComplete: () => {
+      TweenMax.to(you.legs.right.rotation, reverse ? speed * 2 : speed, {
+        x: reverse ? THREE.Math.degToRad(angle) : THREE.Math.degToRad(- angle),
+        ease: Power2.easeInOut,
+        onComplete: () => chicken.legs.walking = false
+      });
+    }
+  });
+
 };
 
 const addChickens = font => {
@@ -177,6 +246,7 @@ const createChicken = (player = false, font, pos = {x: randomIntFromInterval(0, 
       z: pos.z
     },
     speeds: {
+      jump: .5,
       wings: .5
     }
   };
@@ -200,7 +270,7 @@ const createChicken = (player = false, font, pos = {x: randomIntFromInterval(0, 
 
   // BODY
   const bodySize = {w: 1, h: 1, depth: 1.5};
-  const body = box(bodySize, {x: 0, y: 1.5, z: 0}, colors.chicken.body);
+  const body = box(bodySize, {x: 0, y: 1.25, z: 0}, colors.chicken.body);
   chicken.add(body);
 
   // HEAD
@@ -277,7 +347,18 @@ const createChicken = (player = false, font, pos = {x: randomIntFromInterval(0, 
 
   addTextToChicken(chicken, head, font);
 
-  if (player) this.player = chicken;
+  if (player) {
+    this.player = chicken;
+
+    you = {
+      legs: {
+        walking: false,
+        left: legLeftObj,
+        right: legRightObj
+      },
+      shadow: shadow
+    };
+  }
 };
 
 const box = (size, position, color) => {
@@ -308,6 +389,10 @@ const createFloor = (w, h, segments) => {
 const animate = () => {
   requestAnimationFrame(animate);
 
+  if (keyPressed[` `]) animateChickenFly(this.player, you.shadow, 0);
+  if (keyPressed[`z`]) animateChickenWalk(this.player);
+  if (keyPressed[`s`]) animateChickenWalk(this.player, true);
+
   if (!this.player) return;
 
   this.controls.update(1);
@@ -331,37 +416,42 @@ const animateChickenFly = (chicken, shadow, delay = Math.random() * 3 + .5) => {
   if (chicken.userData.flyAnimation) return;
   chicken.userData.flyAnimation = true;
 
-  const start = chicken.userData.position.y;
-  const delta = 1;
+  // Wings animation
+  const wingSpeed = {up: chicken.userData.speeds.wings, down: chicken.userData.speeds.wings / 2};
+  const jumpSpeed = {up: chicken.userData.speeds.jump, down: chicken.userData.speeds.jump * 1.25};
 
   const wingLeft = findObject(chicken, `wingLeft`);
   const wingLeftVisible = isObjectVisible(wingLeft);
-  if (wingLeftVisible) animateChickenWing(wingLeft, delay);
+  if (wingLeftVisible) setTimeout(() => animateChickenWing(wingLeft, delay, wingSpeed), 250);
 
   const wingRight = findObject(chicken, `wingRight`);
   const wingRightVisible = isObjectVisible(wingRight);
-  if (wingRightVisible) animateChickenWing(wingRight, delay);
+  if (wingRightVisible) setTimeout(() => animateChickenWing(wingRight, delay, wingSpeed), 250);
+
+  // Jump animation
+  const start = chicken.userData.position.y;
+  const delta = 1;
 
   const tl = new TimelineMax();
-  tl.to(chicken.position, chicken.userData.speeds.wings, {
+  tl.to(chicken.position, jumpSpeed.up, {
     delay: delay,
     y: start + delta,
     ease: Power2.easeInOut,
     onComplete: () => {
-      TweenMax.to(chicken.position, chicken.userData.speeds.wings * 1.25, {
+      TweenMax.to(chicken.position, jumpSpeed.down, {
         y: start,
         ease: Power2.easeInOut,
         onComplete: () => {chicken.userData.flyAnimation = false;}
       });
     }
-  }, 0).to(shadow.scale, chicken.userData.speeds.wings, {
+  }, 0).to(shadow.scale, jumpSpeed.up, {
     delay: delay,
     x: shadow.userData.radius * .75,
     y: shadow.userData.radius * .75,
     z: shadow.userData.radius * .75,
     ease: Power2.easeInOut,
     onComplete: () => {
-      TweenMax.to(shadow.scale, chicken.userData.speeds.wings * 1.25, {
+      TweenMax.to(shadow.scale, jumpSpeed.down, {
         x: shadow.userData.radius,
         y: shadow.userData.radius,
         z: shadow.userData.radius,
@@ -370,12 +460,13 @@ const animateChickenFly = (chicken, shadow, delay = Math.random() * 3 + .5) => {
     }
   }, 0);
 
-  if (chicken === this.player) {
-    TweenMax.to(this.camera.position, chicken.userData.speeds.wings, {
+  // Normalize camera for player
+  if (chicken === this.player && !moveCameraWithJump) {
+    TweenMax.to(this.camera.position, jumpSpeed.up, {
       y: camera.y - delta,
       ease: Power2.easeInOut,
       onComplete: () => {
-        TweenMax.to(this.camera.position, chicken.userData.speeds.wings * 1.25, {
+        TweenMax.to(this.camera.position, jumpSpeed.down, {
           y: camera.y,
           ease: Power2.easeInOut
         });
@@ -398,27 +489,29 @@ const isObjectVisible = obj => {
 
 };
 
-const animateChickenWing = (wing, delay) => {
+const animateChickenWing = (wing, delay, speed) => {
 
-  const speed = wing.parent.userData.speeds.wings;
-  const start = 180;
-  const end = 0;
+  const angle = {begin: 0, to: 160};
+  const repeat = 3;
 
   if (wing.userData.animateWing) return;
   wing.userData.animateWing = true;
 
-  TweenMax.to(wing.rotation, speed / 2, {
-    delay: delay,
-    z: wing.userData.part === `wingRight` ? THREE.Math.degToRad(- start) : THREE.Math.degToRad(start),
-    ease: Power2.easeInOut,
-    onComplete: () => {
-      TweenMax.to(wing.rotation, speed, {
-        z: THREE.Math.degToRad(end),
-        ease: Power2.easeInOut,
-        onComplete: () => {wing.userData.animateWing = false;}
-      });
-    }
-  });
+  for (let i = 0;i < repeat;i ++) {
+
+    TweenMax.to(wing.rotation, (speed.down / repeat) * (1 + (i * ((speed.down / repeat) * 2))), {
+      delay: delay + ((speed.down + speed.up) / repeat * i),
+      z: wing.userData.part === `wingLeft` ? THREE.Math.degToRad(angle.to) : THREE.Math.degToRad(- angle.to),
+      ease: Circ.easeInOut,
+      onComplete: () => {
+        TweenMax.to(wing.rotation, (speed.up / repeat) * (1 + (i * ((speed.up / repeat) * 2))), {
+          z: wing.userData.part === `wingLeft` ? THREE.Math.degToRad(angle.begin) : THREE.Math.degToRad(- angle.begin),
+          ease: Circ.easeInOut,
+          onComplete: () => {wing.userData.animateWing = false;}
+        });
+      }
+    });
+  }
 };
 
 const randomIntFromInterval = (min, max) => {

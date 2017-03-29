@@ -2,7 +2,6 @@
 
 ## Features
 
-- Chicken legs that animate when running around
 - Chicken only jumps when it moves or random when standing still
 - X-ray vision (wireframing) for players to find the bomber (has a red rectangle in his body)
 - Speed boost to run faster
