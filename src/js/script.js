@@ -1,12 +1,8 @@
-//const OrbitControls = require(`three-orbit-controls`)(THREE);
-import FlyControls from './lib/FlyControls';
+const OrbitControls = require(`three-orbit-controls`)(THREE);
 import {TweenMax, Power2, TimelineMax} from 'gsap';
-
-const mouse = {x: 0, y: 0};
+import FlyControls from './lib/FlyControls';
 
 const chickens = [];
-const totalChickens = 100;
-const playerChicken = 0;
 
 const camera = {x: 0, y: 5, z: 10};
 
@@ -30,41 +26,35 @@ const colors = {
 
 const init = () => {
 
-  /* BASICS */
+  // BASICS
   this.scene = new THREE.Scene();
   this.scene.background = new THREE.Color(colors.skybox);
   this.camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 1, 200);
   this.camera.position.x = camera.x;
   this.camera.position.y = camera.y;
   this.camera.position.z = camera.z;
-  //this.camera.rotation.x = - Math.PI / 4;
 
   this.renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
   this.renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(this.renderer.domElement);
 
-  //this.renderer.shadowMap.enabled = true;
-  //this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   this.renderer.setPixelRatio(window.devicePixelRatio);
 
-  this.frustrum = new THREE.Frustum();
-
-  /* CONTROLS */
-  //new OrbitControls(this.camera, this.renderer.domElement);
+  // CONTROLS
+  new OrbitControls(this.camera, this.renderer.domElement);
 
   document.addEventListener(`mousedown`, onMouseDown);
   document.addEventListener(`mouseup`, onMouseUp);
-  document.addEventListener(`mousemove`, onMouseMove);
   document.addEventListener(`keydown`, onKeyDown);
 
-  /* LIGHTS */
+  // LIGHTS
   const mainLight = new THREE.DirectionalLight(colors.lights.main, 1);
   this.scene.add(mainLight);
 
   const ambientLight = new THREE.AmbientLight(colors.lights.ambient, 1);
   this.scene.add(ambientLight);
 
-  /* AXIS */
+  // HELPERS
   this.scene.add(new THREE.AxisHelper(1000));
 
   this.floor = createFloor(500, 500, 1);
@@ -81,7 +71,7 @@ const loadFont = () => {
 };
 
 const onFontLoaded = font => {
-  addChickens(font);
+  addPlayer(font);
 };
 
 const addTextToChicken = (chicken, relativeObject, font) => {
@@ -115,32 +105,8 @@ const addTextToChicken = (chicken, relativeObject, font) => {
   }, delay * chicken.userData.id);
 };
 
-const onMouseMove = e => {
-  e.preventDefault();
-
-  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = - (e.clientY / window.innerHeight) * 2 + 1;
-};
-
 const onMouseDown = e => {
   e.preventDefault();
-
-  const shadow = findObject(this.player, `shadow`);
-  animateChickenFly(this.player, shadow, 0);
-  // console.log(this.controls.mousedown);
-
-  // if (player.userData.flying) return;
-  // player.userData.flying = true;
-
-  // const speed = .2;
-  // const start = 180;
-  // const end = 0;
-
-  // TweenMax.to(player.position, .5, {
-  //   y: player.position.y + 2,
-  //   ease: Power2.easeInOut,
-  //   onComplete: () => player.userData.flying = false
-  // });
 
 };
 
@@ -159,18 +125,14 @@ const onKeyDown = e => {
   }
 };
 
-const addChickens = font => {
-  for (let i = 0;i < totalChickens;i ++) {
-    let player = i === playerChicken ? player = true : player = false;
-    createChicken(player, font);
-  }
+const addPlayer = font => {
+  createChicken(font);
 };
 
-const createChicken = (player = false, font, pos = {x: randomIntFromInterval(0, totalChickens), y: 0, z: randomIntFromInterval(0, totalChickens)}) => {
+const createChicken = (font, pos = {x: 0, y: 0, z: 0}) => {
 
   const userData = {
-    id: chickens.length + 1,
-    player: player,
+    id: 1,
     position: {
       x: pos.x,
       y: pos.y,
@@ -182,16 +144,15 @@ const createChicken = (player = false, font, pos = {x: randomIntFromInterval(0, 
   };
 
   const chicken = new THREE.Object3D();
+  this.player = chicken;
 
-  if (player) {
-    chicken.add(this.camera);
-    this.controls = new FlyControls(chicken, this.renderer.domElement);
-    this.controls.movementSpeed = .1;
-    this.controls.rollSpeed = .05;
-    this.controls.autoForward = false;
-    this.controls.dragToLook = false;
-    this.controls.mouseToTurn = false;
-  }
+  chicken.add(this.camera);
+  this.controls = new FlyControls(chicken, this.renderer.domElement);
+  this.controls.movementSpeed = .1;
+  this.controls.autoForward = false;
+  this.controls.dragToLook = false;
+  this.controls.mouseToTurn = false;
+
   chicken.position.set(pos.x, pos.y, pos.z);
   chicken.rotation.y = randomIntFromInterval(0, Math.PI * 2);
 
@@ -261,8 +222,6 @@ const createChicken = (player = false, font, pos = {x: randomIntFromInterval(0, 
   this.scene.add(chicken);
 
   addTextToChicken(chicken, head, font);
-
-  if (player) this.player = chicken;
 };
 
 const findObject = (parent, obj) => {
@@ -288,11 +247,8 @@ const animate = () => {
   this.controls.update(1);
 
   chickens.forEach(chicken => {
-
     const shadow = findObject(chicken, `shadow`);
     shadow.position.setY(- chicken.position.y + shadow.userData.randomShadowAdd);
-
-    if (chicken !== this.player) animateChickenFly(chicken, shadow);
   });
 
   this.floor.position.x = this.player.position.x;
@@ -310,12 +266,10 @@ const animateChickenFly = (chicken, shadow, delay = Math.random() * 3 + .5) => {
   const delta = 1;
 
   const wingLeft = findObject(chicken, `wingLeft`);
-  const wingLeftVisible = isObjectVisible(wingLeft);
-  if (wingLeftVisible) animateChickenWing(wingLeft, delay);
+  animateChickenWing(wingLeft, delay);
 
   const wingRight = findObject(chicken, `wingRight`);
-  const wingRightVisible = isObjectVisible(wingRight);
-  if (wingRightVisible) animateChickenWing(wingRight, delay);
+  animateChickenWing(wingRight, delay);
 
   const tl = new TimelineMax();
   tl.to(chicken.position, chicken.userData.speeds.wings, {
@@ -357,20 +311,6 @@ const animateChickenFly = (chicken, shadow, delay = Math.random() * 3 + .5) => {
       }
     });
   }
-};
-
-const isObjectVisible = obj => {
-
-  const frustum = new THREE.Frustum();
-  const cameraViewProjectionMatrix = new THREE.Matrix4();
-
-  this.camera.updateMatrixWorld();
-  this.camera.matrixWorldInverse.getInverse(this.camera.matrixWorld);
-  cameraViewProjectionMatrix.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
-  frustum.setFromMatrix(cameraViewProjectionMatrix);
-
-  return frustum.intersectsObject(obj);
-
 };
 
 const animateChickenWing = (wing, delay) => {
