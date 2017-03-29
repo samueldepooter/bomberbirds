@@ -2,46 +2,31 @@
 import FlyControls from './lib/FlyControls';
 import {TweenMax, Power2, Circ, TimelineMax} from 'gsap';
 
-const mouse = {x: 0, y: 0};
+import playground from './settings/playground';
+import chickenSettings from './settings/chicken';
+import lights from './settings/lights';
+import camera from './settings/camera';
 
+const mouse = {x: 0, y: 0};
+const keyPressed = [];
+
+let you = {};
 const chickens = [];
 const totalChickens = 100;
 const playerChicken = 0;
+const spawnSize = totalChickens < 250 ? 250 : totalChickens;
 
-const camera = {x: 0, y: 5, z: 10};
-const moveCameraWithJump = false;
-
-const colors = {
-  chicken: {
-    body: `#FFF`,
-    mouth: `#FF9670`,
-    wattle: `#FF6EA5`,
-    eye: `#000`,
-    wing: `#AEA1A8`,
-    shadow: `#000`,
-    leg: `#FF9670`
-  },
-  lights: {
-    main: `#FFF`,
-    ambient: `#DECED6`
-  },
-  skybox: `#69CEEC`,
-  ground: `#81DD7A`
-};
-
-let you = {};
-
-const keyPressed = [];
+let mainLight, ambientLight;
 
 const init = () => {
 
   /* BASICS */
   this.scene = new THREE.Scene();
-  this.scene.background = new THREE.Color(colors.skybox);
-  this.camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 1, 200);
-  this.camera.position.x = camera.x;
-  this.camera.position.y = camera.y;
-  this.camera.position.z = camera.z;
+  this.scene.background = new THREE.Color(playground.day.state ? playground.skybox.day : playground.skybox.night);
+  this.camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 1, 500);
+  this.camera.position.x = camera.position.x;
+  this.camera.position.y = camera.position.y;
+  this.camera.position.z = camera.position.z;
   //this.camera.rotation.x = - Math.PI / 4;
 
   this.renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
@@ -65,16 +50,18 @@ const init = () => {
   document.addEventListener(`keyup`, onKeyUp);
 
   /* LIGHTS */
-  const mainLight = new THREE.DirectionalLight(colors.lights.main, 1);
+  mainLight = new THREE.DirectionalLight(playground.day.state ? lights.main.day.color : lights.main.night.color, playground.day.state ? lights.main.day.intensity : lights.main.night.intensity);
+  mainLight.position.set(10, 10, 10);
   this.scene.add(mainLight);
 
-  const ambientLight = new THREE.AmbientLight(colors.lights.ambient, 1);
+  ambientLight = new THREE.AmbientLight(playground.day.state ? lights.ambient.day.color : lights.ambient.night.color, playground.day.state ? lights.ambient.day.intensity : lights.ambient.night.intensity);
   this.scene.add(ambientLight);
 
   /* AXIS */
   this.scene.add(new THREE.AxisHelper(1000));
 
-  this.floor = createFloor(500, 500, 1);
+  this.floor = createFloor();
+
   loadFont();
 
   animate();
@@ -89,6 +76,7 @@ const loadFont = () => {
 
 const onFontLoaded = font => {
   addChickens(font);
+  this.arena = createArena(spawnSize);
 };
 
 const addTextToChicken = (chicken, relativeObject, font) => {
@@ -108,11 +96,10 @@ const addTextToChicken = (chicken, relativeObject, font) => {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.userData.name = name;
 
-    chicken.add(mesh);
+    relativeObject.add(mesh);
 
     mesh.rotation.x = - Math.PI / 2;
-    mesh.position.y = relativeObject.position.y + relativeObject.geometry.parameters.height / 2;
-    mesh.position.z = relativeObject.position.z;
+    mesh.position.y = relativeObject.geometry.parameters.height / 2;
 
     TweenMax.to(material, .5, {
       delay: 1,
@@ -149,11 +136,74 @@ const onKeyDown = e => {
 
   keyPressed[key] = true;
 
-  // switch (key) {
-  //
-  // case `z`:
-  //   break;
-  // }
+  switch (key) {
+
+  case `n`:
+    toggleDay();
+    break;
+  }
+
+};
+
+const toggleDay = () => {
+  playground.day.state = !playground.day.state;
+
+  const eyeColor = new THREE.Color(playground.day.state ? chickenSettings.eye.day : chickenSettings.eye.night);
+  chickens.forEach((chicken, i) => {
+    const eyeLeftColor = findObject(chicken.children[0], `eyeLeft`).material.color;
+    TweenMax.to(eyeLeftColor, playground.day.switchDuration, {
+      delay: i * .1,
+      r: eyeColor.r,
+      g: eyeColor.g,
+      b: eyeColor.b,
+      ease: Power2.easeIn
+    });
+
+    const eyeRightColor = findObject(chicken.children[0], `eyeRight`).material.color;
+    TweenMax.to(eyeRightColor, playground.day.switchDuration, {
+      delay: playground.day.state ? 0 : i * .005,
+      r: eyeColor.r,
+      g: eyeColor.g,
+      b: eyeColor.b,
+      ease: Power2.easeIn
+    });
+  });
+
+  // Main
+  const mainLightColor = new THREE.Color(playground.day.state ? lights.main.day.color : lights.main.night.color);
+  TweenMax.to(mainLight.color, playground.day.switchDuration, {
+    r: mainLightColor.r,
+    g: mainLightColor.g,
+    b: mainLightColor.b,
+    ease: Power2.easeIn
+  });
+
+  TweenMax.to(mainLight, playground.day.switchDuration, {
+    intensity: playground.day.state ? lights.main.day.intensity : lights.main.night.intensity,
+    ease: Power2.easeIn
+  });
+
+  // Ambient
+  const ambientLightColor = new THREE.Color(playground.day.state ? lights.ambient.day.color : lights.ambient.night.color);
+  TweenMax.to(ambientLight.color, playground.day.switchDuration, {
+    r: ambientLightColor.r,
+    g: ambientLightColor.g,
+    b: ambientLightColor.b,
+    ease: Power2.easeIn
+  });
+
+  TweenMax.to(ambientLight, playground.day.switchDuration, {
+    intensity: playground.day.state ? lights.ambient.day.intensity : lights.ambient.night.intensity,
+    ease: Power2.easeIn
+  });
+
+  const sceneBackgroundColor = new THREE.Color(playground.day.state ? playground.skybox.day : playground.skybox.night);
+  TweenMax.to(this.scene.background, playground.day.switchDuration, {
+    r: sceneBackgroundColor.r,
+    g: sceneBackgroundColor.g,
+    b: sceneBackgroundColor.b,
+    ease: Power2.easeIn
+  });
 
 };
 
@@ -235,7 +285,7 @@ const addChickens = font => {
   }
 };
 
-const createChicken = (player = false, font, pos = {x: randomIntFromInterval(0, totalChickens), y: 0, z: randomIntFromInterval(0, totalChickens)}) => {
+const createChicken = (player = false, font, pos = {x: randomIntFromInterval(10, spawnSize - 10), y: 0, z: randomIntFromInterval(10, spawnSize - 10)}) => {
 
   const userData = {
     id: chickens.length + 1,
@@ -253,15 +303,6 @@ const createChicken = (player = false, font, pos = {x: randomIntFromInterval(0, 
 
   const chicken = new THREE.Object3D();
 
-  if (player) {
-    chicken.add(this.camera);
-    this.controls = new FlyControls(chicken, this.renderer.domElement);
-    this.controls.movementSpeed = .1;
-    this.controls.rollSpeed = .05;
-    this.controls.autoForward = false;
-    this.controls.dragToLook = false;
-    this.controls.mouseToTurn = false;
-  }
   chicken.position.set(pos.x, pos.y, pos.z);
   chicken.rotation.y = randomIntFromInterval(0, Math.PI * 2);
 
@@ -270,39 +311,56 @@ const createChicken = (player = false, font, pos = {x: randomIntFromInterval(0, 
 
   // BODY
   const bodySize = {w: 1, h: 1, depth: 1.5};
-  const body = box(bodySize, {x: 0, y: 1.25, z: 0}, colors.chicken.body);
+  const body = box(bodySize, {x: 0, y: 1.25, z: 0}, chickenSettings.body);
   chicken.add(body);
 
   // HEAD
   const headSize = {w: 1, h: 1, depth: 1};
-  const head = box(headSize, {x: 0, y: bodySize.h, z: - ((headSize.depth / 2) - (bodySize.depth / 2) + (headSize.depth / 2))}, colors.chicken.body);
+  const head = box(headSize, {x: 0, y: bodySize.h, z: - ((headSize.depth / 2) - (bodySize.depth / 2) + (headSize.depth / 2))}, chickenSettings.body);
   body.add(head);
 
   // EYES
   const eyeSize = {w: .1, h: .1, depth: .1};
-  const eyeLeft = box(eyeSize, {x: - headSize.w / 2, y: head.position.y, z: head.position.z}, colors.chicken.eye);
+  const eyeLeft = box(eyeSize, {x: - headSize.w / 2, y: head.position.y, z: head.position.z}, playground.day.state ? chickenSettings.eye.day : chickenSettings.eye.night, `basic`);
+  eyeLeft.userData.part = `eyeLeft`;
   body.add(eyeLeft);
 
-  const eyeRight = box(eyeSize, {x: headSize.w / 2, y: head.position.y, z: head.position.z}, colors.chicken.eye);
+  const eyeRight = box(eyeSize, {x: headSize.w / 2, y: head.position.y, z: head.position.z}, playground.day.state ? chickenSettings.eye.day : chickenSettings.eye.night, `basic`);
+  eyeRight.userData.part = `eyeRight`;
   body.add(eyeRight);
+
+  // const eyeLeftLightSize = {r: .1, h: 1, segments: 32};
+  // const eyeLeftLight = new THREE.Mesh(
+  //   new THREE.ConeGeometry(eyeLeftLightSize.r, eyeLeftLightSize.h, eyeLeftLightSize.segments),
+  //   new THREE.MeshBasicMaterial({
+  //     color: chickenSettings.eye.light.color,
+  //     transparent: true,
+  //     opacity: playground.day.state ? chickenSettings.eye.light.opacity.day : chickenSettings.eye.light.opacity.night
+  //   })
+  // );
+  // eyeLeftLight.rotation.set(THREE.Math.degToRad(60), 0, 0);
+  // eyeLeft.add(eyeLeftLight);
+  // you.eyeLights = {
+  //   left: eyeLeftLight
+  // };
 
   // MOUTH
   const mouthSize = {w: .3, h: .3, depth: .5};
-  const mouth = box(mouthSize, {x: 0, y: head.position.y, z: - 1}, colors.chicken.mouth);
+  const mouth = box(mouthSize, {x: 0, y: head.position.y, z: - 1}, chickenSettings.mouth);
   body.add(mouth);
 
   // WATTLE
   const wattleSize = {w: .3, h: .3, depth: .3};
-  const wattle = box(wattleSize, {x: 0, y: head.position.y - wattleSize.h, z: - (bodySize.depth / 2 + wattleSize.depth / 2)}, colors.chicken.wattle);
+  const wattle = box(wattleSize, {x: 0, y: head.position.y - wattleSize.h, z: - (bodySize.depth / 2 + wattleSize.depth / 2)}, chickenSettings.wattle);
   body.add(wattle);
 
   // WINGS
   const wingSize = {w: .2, h: .5, depth: 1};
-  const wingLeft = box(wingSize, {x: - (bodySize.w / 2 + wingSize.w / 2), y: body.position.y, z: 0}, colors.chicken.wing);
+  const wingLeft = box(wingSize, {x: - (bodySize.w / 2 + wingSize.w / 2), y: body.position.y, z: 0}, chickenSettings.wing);
   wingLeft.userData.part = `wingLeft`;
   chicken.add(wingLeft);
 
-  const wingRight = box(wingSize, {x: bodySize.w / 2 + wingSize.w / 2, y: body.position.y, z: 0}, colors.chicken.wing);
+  const wingRight = box(wingSize, {x: bodySize.w / 2 + wingSize.w / 2, y: body.position.y, z: 0}, chickenSettings.wing);
   wingRight.userData.part = `wingRight`;
   chicken.add(wingRight);
 
@@ -322,8 +380,8 @@ const createChicken = (player = false, font, pos = {x: randomIntFromInterval(0, 
   legs.add(legRightObj);
 
   const legSize = {w: .1, h: 1, depth: .1};
-  const legLeft = box(legSize, {x: 0, y: - legSize.h / 2, z: 0}, colors.chicken.leg);
-  const legRight = box(legSize, {x: 0, y: - legSize.h / 2, z: 0}, colors.chicken.leg);
+  const legLeft = box(legSize, {x: 0, y: - legSize.h / 2, z: 0}, chickenSettings.leg);
+  const legRight = box(legSize, {x: 0, y: - legSize.h / 2, z: 0}, chickenSettings.leg);
 
   legLeftObj.add(legLeft);
   legRightObj.add(legRight);
@@ -334,12 +392,10 @@ const createChicken = (player = false, font, pos = {x: randomIntFromInterval(0, 
   chicken.add(legs);
 
   // SHADOW
-  const shadowRadius = 1;
-  const shadow = new THREE.Mesh(new THREE.CircleGeometry(shadowRadius, 32), new THREE.MeshBasicMaterial({color: colors.chicken.shadow, depthWrite: false, side: THREE.DoubleSide, transparent: true, opacity: .25}));
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(chickenSettings.shadow.radius, 32), new THREE.MeshBasicMaterial({color: chickenSettings.shadow.color, depthWrite: false, side: THREE.DoubleSide, transparent: true, opacity: .25}));
   shadow.userData.part = `shadow`;
-  shadow.userData.radius = shadowRadius;
-  shadow.userData.randomShadowAdd = 0.001;
-  shadow.position.setY(shadow.userData.randomShadowAdd);
+  shadow.userData.radius = chickenSettings.shadow.radius;
+  shadow.position.setY(.001);
   shadow.rotateX(Math.PI / 2);
   chicken.add(shadow);
 
@@ -348,6 +404,15 @@ const createChicken = (player = false, font, pos = {x: randomIntFromInterval(0, 
   addTextToChicken(chicken, head, font);
 
   if (player) {
+
+    chicken.add(this.camera);
+    this.controls = new FlyControls(chicken, this.renderer.domElement);
+    this.controls.movementSpeed = .1;
+    this.controls.rollSpeed = .05;
+    this.controls.autoForward = false;
+    this.controls.dragToLook = false;
+    this.controls.mouseToTurn = false;
+
     this.player = chicken;
 
     you = {
@@ -361,10 +426,10 @@ const createChicken = (player = false, font, pos = {x: randomIntFromInterval(0, 
   }
 };
 
-const box = (size, position, color) => {
+const box = (size, position, color, material = `phong`) => {
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(size.w, size.h, size.depth),
-    new THREE.MeshPhongMaterial({color: color, shading: THREE.FlatShading})
+    material === `phong` ? new THREE.MeshPhongMaterial({color: color, shading: THREE.FlatShading}) : new THREE.MeshBasicMaterial({color: color})
   );
 
   mesh.position.set(position.x, position.y, position.z);
@@ -375,9 +440,38 @@ const findObject = (parent, obj) => {
   return parent.children.find(child => child.userData.part === obj);
 };
 
-const createFloor = (w, h, segments) => {
-  const geometry = new THREE.PlaneGeometry(w, h, segments);
-  const material = new THREE.MeshBasicMaterial({color: colors.ground, side: THREE.DoubleSide});
+const createArena = size => {
+  const arena = new THREE.Object3D;
+  arena.position.set(0, 0, 0);
+  this.scene.add(arena);
+
+  for (let i = 0;i < 4;i ++) {
+
+    const geometry = new THREE.BoxGeometry(size, playground.arena.size.h, playground.arena.size.depth);
+    const material = new THREE.MeshPhongMaterial({color: playground.arena.color, shading: THREE.FlatShading});
+
+    const mesh = new THREE.Mesh(geometry, material);
+
+    if (i === 0) {
+      mesh.position.set(size / 2, 0, 0);
+    } else if (i === 1) {
+      mesh.position.set(size, 0, size / 2);
+      mesh.rotation.y = Math.PI / 2;
+    } else if (i === 2) {
+      mesh.position.set(size - size / 2, 0, size);
+    } else if (i === 3) {
+      mesh.position.set(0, 0, size / 2);
+      mesh.rotation.y = Math.PI / 2;
+    }
+
+    arena.add(mesh);
+
+  }
+};
+
+const createFloor = () => {
+  const geometry = new THREE.PlaneGeometry(playground.ground.size.w, playground.ground.size.h, playground.ground.size.segments);
+  const material = new THREE.MeshPhongMaterial({color: playground.ground.color, side: THREE.DoubleSide, shading: THREE.FlatShading, shininess: 5});
   const floor = new THREE.Mesh(geometry, material);
 
   floor.rotation.x = THREE.Math.degToRad(90);
@@ -400,7 +494,7 @@ const animate = () => {
   chickens.forEach(chicken => {
 
     const shadow = findObject(chicken, `shadow`);
-    shadow.position.setY(- chicken.position.y + shadow.userData.randomShadowAdd);
+    shadow.position.setY(- chicken.position.y + .001);
 
     if (chicken !== this.player) animateChickenFly(chicken, shadow);
   });
@@ -461,13 +555,13 @@ const animateChickenFly = (chicken, shadow, delay = Math.random() * 3 + .5) => {
   }, 0);
 
   // Normalize camera for player
-  if (chicken === this.player && !moveCameraWithJump) {
+  if (chicken === this.player && !camera.moveWithJump) {
     TweenMax.to(this.camera.position, jumpSpeed.up, {
-      y: camera.y - delta,
+      y: camera.position.y - delta,
       ease: Power2.easeInOut,
       onComplete: () => {
         TweenMax.to(this.camera.position, jumpSpeed.down, {
-          y: camera.y,
+          y: camera.position.y,
           ease: Power2.easeInOut
         });
       }
