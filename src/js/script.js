@@ -17,7 +17,8 @@ const colors = {
     wattle: `#FF6EA5`,
     eye: `#000`,
     wing: `#AEA1A8`,
-    shadow: `#000`
+    shadow: `#000`,
+    legs: `#FF9670`
   },
   lights: {
     main: `#FFF`,
@@ -181,6 +182,7 @@ const createChicken = (player = false, font, pos = {x: randomIntFromInterval(0, 
   };
 
   const chicken = new THREE.Object3D();
+
   if (player) {
     chicken.add(this.camera);
     this.controls = new FlyControls(chicken, this.renderer.domElement);

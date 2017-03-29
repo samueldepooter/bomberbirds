@@ -244,7 +244,9 @@ const FlyControls = function (object, domElement) {
   //document.addEventListener(`mousemove`, this.mousemove);
   document.addEventListener(`keydown`, this.keydown);
   document.addEventListener(`keyup`, this.keyup);
-  document.addEventListener(`contextmenu`, event => event.preventDefault());
+
+  // disable right click (also dev console shortcut!!!)
+  //document.addEventListener(`contextmenu`, event => event.preventDefault());
 
   this.updateMovementVector();
   this.updateRotationVector();
