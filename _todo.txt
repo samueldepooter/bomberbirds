@@ -1,14 +1,21 @@
 # TODO
 
+- PREPARE CLEAN SCENE IN NEW BRANCH
+
 ## Features
 
-- Chicken only jumps when it moves or random when standing still
+- Stamina to run faster, runs out after a while and is regained by not running
 - X-ray vision (wireframing) for players to find the bomber (has a red rectangle in his body)
-- Speed boost to run faster
+- Random floating models that give a power up like extra stamina
 - 1 chicken automatically becomes the bomber
 - Custom chickens
 - Collision between chickens
 - Changes in terrain
+- Pilar coming out of the ground with a lever and random event (model floating above pilar to indicate what event if you pull the lever)
+- pass bomb to other chicken if you have it
+- global timer of bomb, if timer = 0 it explodes
+- Arena becomes smaller after a timer, if you're outside you lose (to make it more interesting)
+- Bomb timer in the sky on cube in middle of arena
 
 ## Optimise
 
