@@ -25,16 +25,6 @@ let interactionBtn, interactionText;
 let interaction = {};
 
 const pilars = [];
-const pilarSettings = [
-  {
-    color: `#646360`,
-    lever: true
-  },
-  {
-    color: `#1B3569`,
-    lever: true
-  }
-];
 
 const init = () => {
 
@@ -90,35 +80,31 @@ const createPilars = () => {
 
   const pos = getWorldPosition(this.player.getObjectByName(`body`).getObjectByName(`head`));
   const direction = this.player.getObjectByName(`body`).getObjectByName(`head`).getWorldDirection();
-  pilarRay = new THREE.Raycaster(pos, direction, 0, 3);
+  pilarRay = new THREE.Raycaster(pos, direction, 0, 5);
 
-  pilarSettings.forEach((pilar, i) => {
+  interactions.levers.forEach((lever, i) => {
 
-    const position = {x: (spawnSize / 2) + i * 5, y: 2.5, z: spawnSize / 2 + 3};
+    const position = {x: (spawnSize / 2) + i * 3, y: 2, z: spawnSize / 2 + 3};
 
-    const pilarMesh = box({w: 1, h: 5, depth: 1}, position, pilar.color);
+    const pilarMesh = box({w: 1, h: 4, depth: 1}, position, `#646360`);
     pilarMesh.name = `pilar${i}`;
-
-    this.scene.add(pilarMesh);
     pilars.push(pilarMesh);
+    this.scene.add(pilarMesh);
 
+    const leverLength = 1.5;
+    const leverMesh = box({w: .3, h: leverLength, depth: .3}, {x: position.x, y: position.y - .2, z: position.z}, `#FF601E`);
 
-    if (pilar.lever) {
-
-      const leverLength = 1.5;
-      const lever = box({w: .1, h: leverLength, depth: .1}, {x: position.x, y: position.y - leverLength / 2, z: position.z}, `#D22513`);
-
-      lever.rotation.x = THREE.Math.degToRad(- 45);
-      lever.geometry.translate(0, leverLength / 2, 0);
-      lever.name = `lever`;
-      lever.userData.id = 1;
-      lever.userData.pilarId = i;
-      lever.userData.button = interactions.levers[i].button;
-      lever.userData.text = interactions.levers[i].text;
-      lever.userData.description = interactions.levers[i].description;
-      lever.userData.action = interactions.levers[i].action;
-      this.scene.add(lever);
-    }
+    leverMesh.rotation.x = THREE.Math.degToRad(- 60);
+    leverMesh.geometry.translate(0, leverLength / 2, 0);
+    leverMesh.name = `lever`;
+    leverMesh.userData.id = 1;
+    leverMesh.userData.pilarId = parseInt(i);
+    leverMesh.userData.button = lever.button;
+    leverMesh.userData.text = lever.text;
+    leverMesh.userData.description = lever.description;
+    leverMesh.userData.action = lever.action;
+    leverMesh.userData.pulled = false;
+    this.scene.add(leverMesh);
 
   });
 
@@ -240,6 +226,14 @@ const interact = key => {
     return;
   }
 
+  const lever = findObject(this.scene, interaction.pilarId, `pilarId`);
+
+  TweenMax.to(lever.rotation, .5, {
+    x: lever.userData.pulled ? THREE.Math.degToRad(- 60) : THREE.Math.degToRad(- 90)
+  });
+
+  lever.userData.pulled = !lever.userData.pulled;
+
   console.log(`Pressed: ${interaction.key}`);
   console.log(`Lever ID: ${interaction.id}`);
   console.log(`Pilar ID: ${interaction.pilarId}`);
@@ -253,7 +247,7 @@ const toggleView = () => {
   TweenMax.to(this.camera.position, .2, {
     x: firstPerson ? 0 : camera.position.x,
     y: firstPerson ? 2.5 : camera.position.y,
-    z: firstPerson ? - .5 : camera.position.z,
+    z: firstPerson ? 0 : camera.position.z,
     ease: Power2.easeInOut
   });
 };
@@ -534,8 +528,8 @@ const box = (size, position, color, material = `phong`) => {
   return mesh;
 };
 
-const findObject = (parent, obj) => {
-  return parent.children.find(child => child.userData.part === obj);
+const findObject = (parent, obj, key = `part`) => {
+  return parent.children.find(child => child.userData[key] === obj);
 };
 
 const createArena = size => {
@@ -548,7 +542,7 @@ const createArena = size => {
   for (let i = 0;i < 4;i ++) {
 
     const geometry = new THREE.BoxGeometry(size, playground.arena.size.h, playground.arena.size.depth);
-    const material = new THREE.MeshPhongMaterial({color: playground.arena.color, shading: THREE.FlatShading});
+    const material = new THREE.MeshPhongMaterial({color: playground.arena.color, shading: THREE.FlatShading, transparent: true, opacity: .5});
 
     const mesh = new THREE.Mesh(geometry, material);
 

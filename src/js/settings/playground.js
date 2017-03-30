@@ -20,7 +20,7 @@ export default {
     size: {
       // width is based on total chickens
       h: 10,
-      depth: 5
+      depth: 1
     }
   }
 };

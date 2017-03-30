@@ -1,5 +1,20 @@
 # TODO
 
+## Core
+
+- Levers pop up after x seconds
+- seconds are shown on screen
+- Levers go away after x seconds
+- Pull lever to explode random chicken
+- Speed boosts
+- Run (with stamina that runs out and is regained when not running)
+
+
+
+
+
+
+
 ## Features
 
 - Stamina to run faster, runs out after a while and is regained by not running

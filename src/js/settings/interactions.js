@@ -11,6 +11,12 @@ export default {
       button: `r`,
       description: `A lever...`,
       action: `Lower shit`
+    },
+    {
+      text: `[HOLD] Pull the lever`,
+      button: `r`,
+      description: `A lever...`,
+      action: `Do some mooorrreeeeee`
     }
   ]
 };
