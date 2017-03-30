@@ -66,6 +66,7 @@ canvas {
     padding: 1rem;
     margin: .5rem;
     margin-right: 2rem;
+    text-transform: uppercase;
   }
 
   & .text {

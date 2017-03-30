@@ -1,6 +1,7 @@
 const OrbitControls = require(`three-orbit-controls`)(THREE);
 import FlyControls from './lib/FlyControls';
 import {TweenMax, Power2, Circ, TimelineMax} from 'gsap';
+import {isEmpty} from 'lodash';
 
 import playground from './settings/playground';
 import chickenSettings from './settings/chicken';
@@ -21,18 +22,17 @@ let mainLight, ambientLight;
 let pilarRay;
 
 let interactionBtn, interactionText;
+let interaction = {};
 
 const pilars = [];
 const pilarSettings = [
   {
-    text: `Pilar with lever`,
     color: `#646360`,
     lever: true
   },
   {
-    text: `Random other pilar!`,
     color: `#1B3569`,
-    lever: false
+    lever: true
   }
 ];
 
@@ -111,9 +111,12 @@ const createPilars = () => {
       lever.rotation.x = THREE.Math.degToRad(- 45);
       lever.geometry.translate(0, leverLength / 2, 0);
       lever.name = `lever`;
-      lever.userData.button = interactions.lever.button;
-      lever.userData.text = interactions.lever.text;
-      lever.userData.description = interactions.lever.description;
+      lever.userData.id = 1;
+      lever.userData.pilarId = i;
+      lever.userData.button = interactions.levers[i].button;
+      lever.userData.text = interactions.levers[i].text;
+      lever.userData.description = interactions.levers[i].description;
+      lever.userData.action = interactions.levers[i].action;
       this.scene.add(lever);
     }
 
@@ -209,6 +212,8 @@ const onKeyPress = e => {
 
   keyPressed[key] = true;
 
+  interact(key);
+
   switch (key) {
 
   case `n`:
@@ -220,6 +225,25 @@ const onKeyPress = e => {
     break;
 
   }
+
+};
+
+const interact = key => {
+
+  if (isEmpty(interaction)) {
+    console.log(`Nothing to interact with`);
+    return;
+  }
+
+  if (interaction.key !== key) {
+    console.log(`Not the correct key`);
+    return;
+  }
+
+  console.log(`Pressed: ${interaction.key}`);
+  console.log(`Lever ID: ${interaction.id}`);
+  console.log(`Pilar ID: ${interaction.pilarId}`);
+  console.log(`Action: ${interaction.action}`);
 
 };
 
@@ -600,6 +624,13 @@ const checkInteraction = () => {
   if (intersect.length) {
     if (intersect[0].object.userData.button) {
 
+      interaction = {
+        id: intersect[0].object.userData.id,
+        pilarId: intersect[0].object.userData.pilarId,
+        key: intersect[0].object.userData.button,
+        action: intersect[0].object.userData.action
+      };
+
       TweenMax.to(interactionBtn, .5, {
         y: 0
       });
@@ -615,6 +646,8 @@ const checkInteraction = () => {
     }
 
   }
+
+  interaction = {};
 
   TweenMax.to(interactionBtn, .5, {
     y: 60

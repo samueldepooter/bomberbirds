@@ -1,7 +1,16 @@
 export default {
-  lever: {
-    text: `Pull the lever`,
-    button: `R`,
-    description: `A lever...`
-  }
+  levers: [
+    {
+      text: `Pull the lever`,
+      button: `r`,
+      description: `A lever...`,
+      action: `Blow up shit`
+    },
+    {
+      text: `Pull the lever`,
+      button: `r`,
+      description: `A lever...`,
+      action: `Lower shit`
+    }
+  ]
 };
