@@ -1,4 +1,4 @@
-//const OrbitControls = require(`three-orbit-controls`)(THREE);
+const OrbitControls = require(`three-orbit-controls`)(THREE);
 import FlyControls from './lib/FlyControls';
 import {TweenMax, Power2, Circ, TimelineMax} from 'gsap';
 
@@ -6,7 +6,9 @@ import playground from './settings/playground';
 import chickenSettings from './settings/chicken';
 import lights from './settings/lights';
 import camera from './settings/camera';
+import interactions from './settings/interactions';
 
+const freeView = false;
 const mouse = {x: 0, y: 0};
 const keyPressed = [];
 let firstPerson = false;
@@ -17,6 +19,8 @@ const spawnSize = 50;
 
 let mainLight, ambientLight;
 let pilarRay;
+
+let interactionBtn, interactionText;
 
 const pilars = [];
 const pilarSettings = [
@@ -34,10 +38,15 @@ const pilarSettings = [
 
 const init = () => {
 
+  const interactions = document.querySelector(`.interactions`);
+  interactionBtn = interactions.childNodes[1];
+  interactionText = interactions.childNodes[3];
+
   /* BASICS */
   this.scene = new THREE.Scene();
   this.scene.background = new THREE.Color(playground.day.state ? playground.skybox.day : playground.skybox.night);
-  this.camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 1, 500);
+  this.camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, .5, 500);
+  this.camera.rotation.y = THREE.Math.degToRad(180);
   this.camera.position.x = camera.position.x;
   this.camera.position.y = camera.position.y;
   this.camera.position.z = camera.position.z;
@@ -51,7 +60,7 @@ const init = () => {
   this.frustrum = new THREE.Frustum();
 
   /* CONTROLS */
-  //new OrbitControls(this.camera, this.renderer.domElement);
+  if (freeView) new OrbitControls(this.camera, this.renderer.domElement);
 
   document.addEventListener(`mousedown`, onMouseDown);
   document.addEventListener(`mouseup`, onMouseUp);
@@ -79,15 +88,15 @@ const init = () => {
 const createPilars = () => {
 
   const pos = getWorldPosition(this.player.getObjectByName(`body`).getObjectByName(`head`));
-  pilarRay = new THREE.Raycaster(pos, this.camera.getWorldDirection(), 0, 3);
+  const direction = this.player.getObjectByName(`body`).getObjectByName(`head`).getWorldDirection();
+  pilarRay = new THREE.Raycaster(pos, direction, 0, 3);
 
   pilarSettings.forEach((pilar, i) => {
 
-    const position = {x: (spawnSize / 2) + i * 5, y: 2.5, z: spawnSize / 2 - 3};
+    const position = {x: (spawnSize / 2) + i * 5, y: 2.5, z: spawnSize / 2 + 3};
 
     const pilarMesh = box({w: 1, h: 5, depth: 1}, position, pilar.color);
     pilarMesh.name = `pilar${i}`;
-    pilarMesh.userData.text = pilar.text;
 
     this.scene.add(pilarMesh);
     pilars.push(pilarMesh);
@@ -98,9 +107,12 @@ const createPilars = () => {
       const leverLength = 1.5;
       const lever = box({w: .1, h: leverLength, depth: .1}, {x: position.x, y: position.y - leverLength / 2, z: position.z}, `#D22513`);
 
-      lever.rotation.x = THREE.Math.degToRad(45);
+      lever.rotation.x = THREE.Math.degToRad(- 45);
       lever.geometry.translate(0, leverLength / 2, 0);
       lever.name = `lever`;
+      lever.userData.button = interactions.lever.button;
+      lever.userData.text = interactions.lever.text;
+      lever.userData.description = interactions.lever.description;
       this.scene.add(lever);
     }
 
@@ -142,6 +154,7 @@ const addTextToChicken = (chicken, relativeObject, font) => {
     relativeObject.add(mesh);
 
     mesh.rotation.x = - Math.PI / 2;
+    mesh.rotation.z = Math.PI;
     mesh.position.y = relativeObject.geometry.parameters.height / 2;
 
     TweenMax.to(material, .5, {
@@ -156,8 +169,20 @@ const onMouseMove = e => {
 
   e.preventDefault();
 
+  const max = 30;
+
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouse.y = - (e.clientY / window.innerHeight) * 2 + 1;
+
+  const container = this.controls.getContainerDimensions();
+  const halfWidth  = container.size[ 0 ] / 2;
+  const halfHeight = container.size[ 1 ] / 2;
+
+  const head = this.player.getObjectByName(`body`).getObjectByName(`head`);
+  const rotationX = THREE.Math.degToRad(((event.pageY - container.offset[ 1 ]) - halfHeight) / halfHeight * max);
+  const rotationY = THREE.Math.degToRad(- (((e.pageX - container.offset[ 0 ]) - halfWidth) / halfWidth) * max);
+  head.rotation.x = rotationX;
+  head.rotation.y = rotationY;
 };
 
 const onMouseDown = e => {
@@ -198,7 +223,7 @@ const toggleView = () => {
 
   TweenMax.to(this.camera.position, .2, {
     x: firstPerson ? 0 : camera.position.x,
-    y: firstPerson ? 3 : camera.position.y,
+    y: firstPerson ? 2.5 : camera.position.y,
     z: firstPerson ? - .5 : camera.position.z,
     ease: Power2.easeInOut
   });
@@ -207,6 +232,7 @@ const toggleView = () => {
 const toggleDay = () => {
   playground.day.state = !playground.day.state;
 
+  /*
   const eyeColor = new THREE.Color(playground.day.state ? chickenSettings.eye.day : chickenSettings.eye.night);
   chickens.forEach((chicken, i) => {
     const eyeLeftColor = findObject(chicken.children[0], `eyeLeft`).material.color;
@@ -227,6 +253,7 @@ const toggleDay = () => {
       ease: Power2.easeIn
     });
   });
+  */
 
   // Main
   const mainLightColor = new THREE.Color(playground.day.state ? lights.main.day.color : lights.main.night.color);
@@ -369,29 +396,29 @@ const createChicken = (font, pos = {x: spawnSize / 2, y: 0, z: spawnSize / 2}) =
 
   // HEAD
   const headSize = {w: 1, h: 1, depth: 1};
-  const head = box(headSize, {x: 0, y: bodySize.h, z: - ((headSize.depth / 2) - (bodySize.depth / 2) + (headSize.depth / 2))}, chickenSettings.body);
+  const head = box(headSize, {x: 0, y: bodySize.h, z: ((headSize.depth / 2) - (bodySize.depth / 2) + (headSize.depth / 2))}, chickenSettings.body);
   head.name = `head`;
   body.add(head);
 
   // EYES
   const eyeSize = {w: .1, h: .1, depth: .1};
-  const eyeLeft = box(eyeSize, {x: - headSize.w / 2, y: head.position.y, z: head.position.z}, playground.day.state ? chickenSettings.eye.day : chickenSettings.eye.night, `basic`);
+  const eyeLeft = box(eyeSize, {x: - headSize.w / 2, y: 0, z: 0}, playground.day.state ? chickenSettings.eye.day : chickenSettings.eye.night, `basic`);
   eyeLeft.userData.part = `eyeLeft`;
-  body.add(eyeLeft);
+  head.add(eyeLeft);
 
-  const eyeRight = box(eyeSize, {x: headSize.w / 2, y: head.position.y, z: head.position.z}, playground.day.state ? chickenSettings.eye.day : chickenSettings.eye.night, `basic`);
+  const eyeRight = box(eyeSize, {x: headSize.w / 2, y: 0, z: 0}, playground.day.state ? chickenSettings.eye.day : chickenSettings.eye.night, `basic`);
   eyeRight.userData.part = `eyeRight`;
-  body.add(eyeRight);
+  head.add(eyeRight);
 
   // MOUTH
   const mouthSize = {w: .3, h: .3, depth: .5};
-  const mouth = box(mouthSize, {x: 0, y: head.position.y, z: - 1}, chickenSettings.mouth);
-  body.add(mouth);
+  const mouth = box(mouthSize, {x: 0, y: 0, z: headSize.depth / 2 + mouthSize.depth / 2}, chickenSettings.mouth);
+  head.add(mouth);
 
   // WATTLE
   const wattleSize = {w: .3, h: .3, depth: .3};
-  const wattle = box(wattleSize, {x: 0, y: head.position.y - wattleSize.h, z: - (bodySize.depth / 2 + wattleSize.depth / 2)}, chickenSettings.wattle);
-  body.add(wattle);
+  const wattle = box(wattleSize, {x: 0, y: - wattleSize.h, z: headSize.depth / 2 + wattleSize.depth / 2}, chickenSettings.wattle);
+  head.add(wattle);
 
   // WINGS
   const wingSize = {w: .2, h: .5, depth: 1};
@@ -551,26 +578,39 @@ const getWorldPosition = object => {
 const checkInteraction = () => {
 
   const pos = getWorldPosition(this.player.getObjectByName(`body`).getObjectByName(`head`));
+  const direction = this.player.getObjectByName(`body`).getObjectByName(`head`).getWorldDirection();
 
-  pilarRay.set(pos, this.camera.getWorldDirection());
+  pilarRay.set(pos, direction);
 
+  //HIERZO
   const intersect = pilarRay.intersectObjects(this.scene.children);
-  intersect.forEach(obj => console.log(obj.object.name));
 
+  if (intersect.length) {
+    if (intersect[0].object.userData.button) {
 
-  // pilars.forEach(pilar => {
-  //
-  //   const foundObj = findObject(this.scene, `pilar`);
-  //   if (!foundObj) return;
-  //
-  //   console.log(intersect);
-  //
-  //   if (intersect.length) {
-  //     const found = intersect[0];
-  //     if (found.distance < 4) console.log(found.object.userData.text);
-  //   }
-  // });
+      TweenMax.to(interactionBtn, .5, {
+        y: 0
+      });
+      TweenMax.to(interactionText, .5, {
+        delay: .05,
+        y: 0
+      });
 
+      interactionBtn.textContent = intersect[0].object.userData.button;
+      interactionText.textContent = intersect[0].object.userData.text;
+
+      return;
+    }
+
+  }
+
+  TweenMax.to(interactionBtn, .5, {
+    y: 60
+  });
+  TweenMax.to(interactionText, .5, {
+    delay: .05,
+    y: 60
+  });
 };
 
 const animateChickenFly = (chicken, shadow, delay = Math.random() * 3 + .5) => {

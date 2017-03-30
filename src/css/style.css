@@ -13,6 +13,8 @@ body {
 canvas {
   width: 100vw;
   height: 100vh;
+
+  cursor: none;
 }
 
 .para {
@@ -39,5 +41,36 @@ canvas {
   & .control {
     color: white;
     margin-right: .5rem;
+  }
+}
+
+.interactions {
+  width: 100%;
+  position: absolute;
+  bottom: 1rem;
+  left: .5rem;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  & .button {
+    width: 3.5rem;
+    height: 3.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    background-color: black;
+    font-weight: bold;
+    padding: 1rem;
+    margin: .5rem;
+    margin-right: 2rem;
+  }
+
+  & .text {
+    color: white;
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px black;
   }
 }
