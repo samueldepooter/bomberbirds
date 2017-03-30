@@ -68,6 +68,7 @@ const init = () => {
 
   document.addEventListener(`keypress`, onKeyPress);
   document.addEventListener(`keyup`, onKeyUp);
+  window.addEventListener(`resize`, onWindowResize);
 
   /* LIGHTS */
   mainLight = new THREE.DirectionalLight(playground.day.state ? lights.main.day.color : lights.main.night.color, playground.day.state ? lights.main.day.intensity : lights.main.night.intensity);
@@ -169,17 +170,21 @@ const onMouseMove = e => {
 
   e.preventDefault();
 
-  const max = 30;
-
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouse.y = - (e.clientY / window.innerHeight) * 2 + 1;
 
+  if (this.controls) rotateChickenHead(e);
+};
+
+const rotateChickenHead = e => {
   const container = this.controls.getContainerDimensions();
   const halfWidth  = container.size[ 0 ] / 2;
   const halfHeight = container.size[ 1 ] / 2;
 
+  const max = 30;
+
   const head = this.player.getObjectByName(`body`).getObjectByName(`head`);
-  const rotationX = THREE.Math.degToRad(((event.pageY - container.offset[ 1 ]) - halfHeight) / halfHeight * max);
+  const rotationX = THREE.Math.degToRad(((e.pageY - container.offset[ 1 ]) - halfHeight) / halfHeight * max);
   const rotationY = THREE.Math.degToRad(- (((e.pageX - container.offset[ 0 ]) - halfWidth) / halfWidth) * max);
   head.rotation.x = rotationX;
   head.rotation.y = rotationY;
@@ -232,28 +237,28 @@ const toggleView = () => {
 const toggleDay = () => {
   playground.day.state = !playground.day.state;
 
-  /*
+  // Change eye color
   const eyeColor = new THREE.Color(playground.day.state ? chickenSettings.eye.day : chickenSettings.eye.night);
-  chickens.forEach((chicken, i) => {
-    const eyeLeftColor = findObject(chicken.children[0], `eyeLeft`).material.color;
+  chickens.forEach(chicken => {
+    console.log(chicken.children);
+    const eyeLeftColor = findObject(chicken.children[0].children[0], `eyeLeft`).material.color;
     TweenMax.to(eyeLeftColor, playground.day.switchDuration, {
-      delay: i * .1,
+      delay: playground.day.state ? 0 : Math.random() * .5 + .1,
       r: eyeColor.r,
       g: eyeColor.g,
       b: eyeColor.b,
       ease: Power2.easeIn
     });
 
-    const eyeRightColor = findObject(chicken.children[0], `eyeRight`).material.color;
+    const eyeRightColor = findObject(chicken.children[0].children[0], `eyeRight`).material.color;
     TweenMax.to(eyeRightColor, playground.day.switchDuration, {
-      delay: playground.day.state ? 0 : i * .005,
+      delay: playground.day.state ? 0 : Math.random() * .5 + .1,
       r: eyeColor.r,
       g: eyeColor.g,
       b: eyeColor.b,
       ease: Power2.easeIn
     });
   });
-  */
 
   // Main
   const mainLightColor = new THREE.Color(playground.day.state ? lights.main.day.color : lights.main.night.color);
@@ -291,6 +296,13 @@ const toggleDay = () => {
     ease: Power2.easeIn
   });
 
+};
+
+const onWindowResize = () => {
+  this.camera.aspect = window.innerWidth / window.innerHeight;
+  this.camera.updateProjectionMatrix();
+
+  this.renderer.setSize(window.innerWidth, window.innerHeight);
 };
 
 const onKeyUp = e => {
