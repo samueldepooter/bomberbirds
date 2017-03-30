@@ -2,7 +2,7 @@
 
 const init = () => {
 
-  console.log(`Hello, threejs_particles`)
+  console.log(`Hello, threejs_particles`);
 
 };
 
