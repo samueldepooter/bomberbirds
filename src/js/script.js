@@ -9,12 +9,28 @@ import camera from './settings/camera';
 
 const mouse = {x: 0, y: 0};
 const keyPressed = [];
+let firstPerson = false;
 
 let you = {};
 const chickens = [];
 const spawnSize = 50;
 
 let mainLight, ambientLight;
+let pilarRay;
+
+const pilars = [];
+const pilarSettings = [
+  {
+    text: `Pilar with lever`,
+    color: `#646360`,
+    lever: true
+  },
+  {
+    text: `Random other pilar!`,
+    color: `#1B3569`,
+    lever: false
+  }
+];
 
 const init = () => {
 
@@ -41,7 +57,7 @@ const init = () => {
   document.addEventListener(`mouseup`, onMouseUp);
   document.addEventListener(`mousemove`, onMouseMove);
 
-  document.addEventListener(`keydown`, onKeyDown);
+  document.addEventListener(`keypress`, onKeyPress);
   document.addEventListener(`keyup`, onKeyUp);
 
   /* LIGHTS */
@@ -55,11 +71,41 @@ const init = () => {
   /* AXIS */
   this.scene.add(new THREE.AxisHelper(1000));
 
-  this.floor = createFloor();
-
   loadFont();
 
   animate();
+};
+
+const createPilars = () => {
+
+  const pos = getWorldPosition(this.player.getObjectByName(`body`).getObjectByName(`head`));
+  pilarRay = new THREE.Raycaster(pos, this.camera.getWorldDirection(), 0, 3);
+
+  pilarSettings.forEach((pilar, i) => {
+
+    const position = {x: (spawnSize / 2) + i * 5, y: 2.5, z: spawnSize / 2 - 3};
+
+    const pilarMesh = box({w: 1, h: 5, depth: 1}, position, pilar.color);
+    pilarMesh.name = `pilar${i}`;
+    pilarMesh.userData.text = pilar.text;
+
+    this.scene.add(pilarMesh);
+    pilars.push(pilarMesh);
+
+
+    if (pilar.lever) {
+
+      const leverLength = 1.5;
+      const lever = box({w: .1, h: leverLength, depth: .1}, {x: position.x, y: position.y - leverLength / 2, z: position.z}, `#D22513`);
+
+      lever.rotation.x = THREE.Math.degToRad(45);
+      lever.geometry.translate(0, leverLength / 2, 0);
+      lever.name = `lever`;
+      this.scene.add(lever);
+    }
+
+  });
+
 };
 
 const loadFont = () => {
@@ -70,8 +116,10 @@ const loadFont = () => {
 };
 
 const onFontLoaded = font => {
-  addChickens(font);
+  this.floor = createFloor();
+  createChicken(font);
   this.arena = createArena(spawnSize);
+  createPilars();
 };
 
 const addTextToChicken = (chicken, relativeObject, font) => {
@@ -124,7 +172,7 @@ const onMouseUp = e => {
   e.preventDefault();
 };
 
-const onKeyDown = e => {
+const onKeyPress = e => {
 
   e.preventDefault();
   const key = e.key;
@@ -136,8 +184,24 @@ const onKeyDown = e => {
   case `n`:
     toggleDay();
     break;
+
+  case `Enter`:
+    toggleView();
+    break;
+
   }
 
+};
+
+const toggleView = () => {
+  firstPerson = !firstPerson;
+
+  TweenMax.to(this.camera.position, .2, {
+    x: firstPerson ? 0 : camera.position.x,
+    y: firstPerson ? 3 : camera.position.y,
+    z: firstPerson ? - .5 : camera.position.z,
+    ease: Power2.easeInOut
+  });
 };
 
 const toggleDay = () => {
@@ -273,14 +337,10 @@ const animateChickenWalk = (chicken, reverse = false) => {
 
 };
 
-const addChickens = font => {
-  createChicken(font);
-};
-
 const createChicken = (font, pos = {x: spawnSize / 2, y: 0, z: spawnSize / 2}) => {
 
   const userData = {
-    id: chickens.length + 1,
+    id: 1,
     position: {
       x: pos.x,
       y: pos.y,
@@ -293,6 +353,7 @@ const createChicken = (font, pos = {x: spawnSize / 2, y: 0, z: spawnSize / 2}) =
   };
 
   const chicken = new THREE.Object3D();
+  chicken.name = `chicken`;
 
   chicken.position.set(pos.x, pos.y, pos.z);
   //chicken.rotation.y = randomIntFromInterval(0, Math.PI * 2);
@@ -303,11 +364,13 @@ const createChicken = (font, pos = {x: spawnSize / 2, y: 0, z: spawnSize / 2}) =
   // BODY
   const bodySize = {w: 1, h: 1, depth: 1.5};
   const body = box(bodySize, {x: 0, y: 1.25, z: 0}, chickenSettings.body);
+  body.name = `body`;
   chicken.add(body);
 
   // HEAD
   const headSize = {w: 1, h: 1, depth: 1};
   const head = box(headSize, {x: 0, y: bodySize.h, z: - ((headSize.depth / 2) - (bodySize.depth / 2) + (headSize.depth / 2))}, chickenSettings.body);
+  head.name = `head`;
   body.add(head);
 
   // EYES
@@ -387,6 +450,8 @@ const createChicken = (font, pos = {x: spawnSize / 2, y: 0, z: spawnSize / 2}) =
   this.player = chicken;
 
   you = {
+    head: head,
+    body: body,
     legs: {
       walking: false,
       left: legLeftObj,
@@ -411,7 +476,9 @@ const findObject = (parent, obj) => {
 };
 
 const createArena = size => {
-  const arena = new THREE.Object3D;
+  const arena = new THREE.Object3D();
+  arena.name = `arena`;
+
   arena.position.set(0, 0, 0);
   this.scene.add(arena);
 
@@ -445,6 +512,7 @@ const createFloor = () => {
   const floor = new THREE.Mesh(geometry, material);
 
   floor.rotation.x = THREE.Math.degToRad(90);
+  floor.name = `floor`;
 
   this.scene.add(floor);
   return floor;
@@ -453,11 +521,13 @@ const createFloor = () => {
 const animate = () => {
   requestAnimationFrame(animate);
 
+  if (!this.player) return;
+
+  checkInteraction();
+
   if (keyPressed[` `]) animateChickenFly(this.player, you.shadow, 0);
   if (keyPressed[`z`]) animateChickenWalk(this.player);
   if (keyPressed[`s`]) animateChickenWalk(this.player, true);
-
-  if (!this.player) return;
 
   this.controls.update(1);
 
@@ -469,10 +539,38 @@ const animate = () => {
     if (chicken !== this.player) animateChickenFly(chicken, shadow);
   });
 
-  this.floor.position.x = this.player.position.x;
-  this.floor.position.z = this.player.position.z;
-
   render();
+};
+
+const getWorldPosition = object => {
+  const vector = new THREE.Vector3();
+  vector.setFromMatrixPosition(object.matrixWorld);
+  return vector;
+};
+
+const checkInteraction = () => {
+
+  const pos = getWorldPosition(this.player.getObjectByName(`body`).getObjectByName(`head`));
+
+  pilarRay.set(pos, this.camera.getWorldDirection());
+
+  const intersect = pilarRay.intersectObjects(this.scene.children);
+  intersect.forEach(obj => console.log(obj.object.name));
+
+
+  // pilars.forEach(pilar => {
+  //
+  //   const foundObj = findObject(this.scene, `pilar`);
+  //   if (!foundObj) return;
+  //
+  //   console.log(intersect);
+  //
+  //   if (intersect.length) {
+  //     const found = intersect[0];
+  //     if (found.distance < 4) console.log(found.object.userData.text);
+  //   }
+  // });
+
 };
 
 const animateChickenFly = (chicken, shadow, delay = Math.random() * 3 + .5) => {
@@ -525,7 +623,7 @@ const animateChickenFly = (chicken, shadow, delay = Math.random() * 3 + .5) => {
   }, 0);
 
   // Normalize camera for player
-  if (chicken === this.player && !camera.moveWithJump) {
+  if (chicken === this.player && !camera.moveWithJump && !firstPerson) {
     TweenMax.to(this.camera.position, jumpSpeed.up, {
       y: camera.position.y - delta,
       ease: Power2.easeInOut,

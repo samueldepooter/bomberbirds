@@ -1,7 +1,5 @@
 # TODO
 
-- PREPARE CLEAN SCENE IN NEW BRANCH
-
 ## Features
 
 - Stamina to run faster, runs out after a while and is regained by not running
