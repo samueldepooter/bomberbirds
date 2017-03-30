@@ -19,7 +19,7 @@ export default {
     color: `#A2A4A1`,
     size: {
       // width is based on total chickens
-      h: 100,
+      h: 10,
       depth: 5
     }
   }
