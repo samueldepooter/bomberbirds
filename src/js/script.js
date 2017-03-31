@@ -21,7 +21,7 @@ const spawnSize = 50;
 let mainLight, ambientLight;
 let pilarRay;
 
-let interactionBtn, interactionText;
+let interactionKey, interactionText;
 let interaction = {};
 
 const pilars = [];
@@ -29,7 +29,7 @@ const pilars = [];
 const init = () => {
 
   const interactions = document.querySelector(`.interactions`);
-  interactionBtn = interactions.childNodes[1];
+  interactionKey = interactions.childNodes[1];
   interactionText = interactions.childNodes[3];
 
   /* BASICS */
@@ -92,18 +92,16 @@ const createPilars = () => {
     this.scene.add(pilarMesh);
 
     const leverLength = 1.5;
-    const leverMesh = box({w: .3, h: leverLength, depth: .3}, {x: position.x, y: position.y - .2, z: position.z}, `#FF601E`);
-
+    const leverMesh = box({w: .3, h: leverLength, depth: .3}, {x: position.x, y: position.y + .1, z: position.z}, `#FF601E`);
     leverMesh.rotation.x = THREE.Math.degToRad(- 60);
     leverMesh.geometry.translate(0, leverLength / 2, 0);
+
     leverMesh.name = `lever`;
-    leverMesh.userData.id = 1;
-    leverMesh.userData.pilarId = parseInt(i);
-    leverMesh.userData.button = lever.button;
-    leverMesh.userData.text = lever.text;
-    leverMesh.userData.description = lever.description;
-    leverMesh.userData.action = lever.action;
+    leverMesh.userData = lever;
+    leverMesh.userData.pilarId = i;
     leverMesh.userData.pulled = false;
+    leverMesh.userData.holding = 0;
+
     this.scene.add(leverMesh);
 
   });
@@ -196,9 +194,7 @@ const onKeyPress = e => {
   e.preventDefault();
   const key = e.key;
 
-  keyPressed[key] = true;
-
-  interact(key);
+  if (!keyPressed[key] && !interaction.hold) interactQuick(key);
 
   switch (key) {
 
@@ -212,33 +208,84 @@ const onKeyPress = e => {
 
   }
 
+  keyPressed[key] = true;
+
 };
 
-const interact = key => {
+const validateInteraction = (key, state = `quick`) => {
+
+  if (state === `hold`) {
+
+    if (!interaction.hold) {
+      console.log(`Not a hold event!`);
+      return;
+    }
+
+  }
 
   if (isEmpty(interaction)) {
     console.log(`Nothing to interact with`);
-    return;
+    return false;
   }
 
   if (interaction.key !== key) {
     console.log(`Not the correct key`);
-    return;
+    return false;
   }
 
+  return true;
+};
+
+const interactQuick = key => {
+
+  const check = validateInteraction(key);
+  if (!check) return;
+
+  rotateLever();
+};
+
+const interactHold = (key, state) => {
+
+  const el = document.querySelector(`.hold`);
+
+  // if hold event stops or interaction is done
+  if (!state || interaction.done) {
+    el.style.width = `0`;
+    interaction.holding = 0;
+    return;
+  }
+  el.style.width = `${interaction.holding}%`;
+
+  // if hold event is ongoing
+  const check = validateInteraction(key, `hold`);
+  if (!check) return;
+
+  switch (key) {
+
+  case `r`:
+
+    interaction.holding++;
+
+    if (interaction.holding > 100) {
+      console.log(`done!`);
+      interaction.done = true;
+
+      // remove key so event is not shown anymore
+      const lever = findObject(this.scene, interaction.pilarId, `pilarId`);
+      lever.userData.key = ``;
+
+      rotateLever();
+    }
+  }
+
+};
+
+const rotateLever = () => {
   const lever = findObject(this.scene, interaction.pilarId, `pilarId`);
-
   TweenMax.to(lever.rotation, .5, {
-    x: lever.userData.pulled ? THREE.Math.degToRad(- 60) : THREE.Math.degToRad(- 90)
+    x: lever.userData.pulled ? THREE.Math.degToRad(- 60) : THREE.Math.degToRad(- 90),
+    onComplete: () => lever.userData.pulled = !lever.userData.pulled
   });
-
-  lever.userData.pulled = !lever.userData.pulled;
-
-  console.log(`Pressed: ${interaction.key}`);
-  console.log(`Lever ID: ${interaction.id}`);
-  console.log(`Pilar ID: ${interaction.pilarId}`);
-  console.log(`Action: ${interaction.action}`);
-
 };
 
 const toggleView = () => {
@@ -580,11 +627,14 @@ const animate = () => {
 
   if (!this.player) return;
 
-  checkInteraction();
+  checkObjectInteraction();
 
   if (keyPressed[` `]) animateChickenFly(this.player, you.shadow, 0);
   if (keyPressed[`z`]) animateChickenWalk(this.player);
   if (keyPressed[`s`]) animateChickenWalk(this.player, true);
+
+  if (keyPressed[`r`]) interactHold(`r`, true);
+  if (!keyPressed[`r`]) interactHold(`r`, false);
 
   this.controls.update(1);
 
@@ -605,27 +655,21 @@ const getWorldPosition = object => {
   return vector;
 };
 
-const checkInteraction = () => {
+const checkObjectInteraction = () => {
 
   const pos = getWorldPosition(this.player.getObjectByName(`body`).getObjectByName(`head`));
   const direction = this.player.getObjectByName(`body`).getObjectByName(`head`).getWorldDirection();
 
   pilarRay.set(pos, direction);
 
-  //HIERZO
   const intersect = pilarRay.intersectObjects(this.scene.children);
 
   if (intersect.length) {
-    if (intersect[0].object.userData.button) {
+    if (intersect[0].object.userData.key) {
 
-      interaction = {
-        id: intersect[0].object.userData.id,
-        pilarId: intersect[0].object.userData.pilarId,
-        key: intersect[0].object.userData.button,
-        action: intersect[0].object.userData.action
-      };
+      interaction = intersect[0].object.userData;
 
-      TweenMax.to(interactionBtn, .5, {
+      TweenMax.to(interactionKey, .5, {
         y: 0
       });
       TweenMax.to(interactionText, .5, {
@@ -633,7 +677,7 @@ const checkInteraction = () => {
         y: 0
       });
 
-      interactionBtn.textContent = intersect[0].object.userData.button;
+      interactionKey.textContent = intersect[0].object.userData.key;
       interactionText.textContent = intersect[0].object.userData.text;
 
       return;
@@ -643,7 +687,7 @@ const checkInteraction = () => {
 
   interaction = {};
 
-  TweenMax.to(interactionBtn, .5, {
+  TweenMax.to(interactionKey, .5, {
     y: 60
   });
   TweenMax.to(interactionText, .5, {

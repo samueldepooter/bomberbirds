@@ -32,7 +32,7 @@ canvas {
   align-items: center;
   font-size: 1rem;
 
-  & .button {
+  & .key {
     border: 1px solid white;
     padding: .3rem .5rem;
     border-radius: 1rem;
@@ -42,6 +42,17 @@ canvas {
     color: white;
     margin-right: .5rem;
   }
+}
+
+.hold {
+  width: 0;
+  height: .5rem;
+
+  position: absolute;
+  bottom: 0;
+  left: 0;
+
+  background: #ff601e;
 }
 
 .interactions {
@@ -54,7 +65,7 @@ canvas {
   justify-content: center;
   align-items: center;
 
-  & .button {
+  & .key {
     width: 3.5rem;
     height: 3.5rem;
     display: flex;
