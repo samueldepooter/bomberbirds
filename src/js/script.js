@@ -252,7 +252,6 @@ const interactQuick = key => {
   if (!check) return;
 
   const lever = findObject(this.scene, interaction.pilarId, `pilarId`);
-  console.log(lever.userData);
 
   if (lever.userData.pilarId === 0) toggleTinyChicken(true);
   if (lever.userData.pilarId === 1) toggleDay();
@@ -679,8 +678,6 @@ const animate = () => {
   if (keyPressed[` `]) animateChickenFly(this.player, you.shadow, 0);
   if (keyPressed[`z`]) animateChickenWalk(this.player);
   if (keyPressed[`s`]) animateChickenWalk(this.player, true);
-
-  console.log(interaction);
 
   // custom check if r is constantly down
   if (keyPressed[interaction.key]) interactHold(interaction.key, true);
