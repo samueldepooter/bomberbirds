@@ -14,7 +14,7 @@ export default {
       }
     }
   },
-  wing: `#AEA1A8`,
+  wing: `#E3E1E0`,
   shadow: {
     color: `#000`,
     radius: 1

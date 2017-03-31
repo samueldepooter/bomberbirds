@@ -10,11 +10,6 @@
 - Run (with stamina that runs out and is regained when not running)
 
 
-
-
-
-
-
 ## Features
 
 - Stamina to run faster, runs out after a while and is regained by not running

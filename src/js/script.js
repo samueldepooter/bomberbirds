@@ -89,17 +89,16 @@ const createPilars = () => {
 
   interactions.levers.forEach((lever, i) => {
 
-    const position = {x: (spawnSize / 2) + i * 3, y: 2, z: spawnSize / 2 + 3};
+    const position = {x: (spawnSize / 2) + i * 3, y: 2, z: spawnSize / 2 - 3};
 
-    const pilarMesh = box({w: 1, h: 4, depth: 1}, position, `#646360`);
+    const pilarMesh = box({w: 1, h: 4, depth: 1}, position, `#606060`);
     pilarMesh.name = `pilar${i}`;
     pilars.push(pilarMesh);
     this.scene.add(pilarMesh);
 
-    const leverLength = 1.5;
-    const leverMesh = box({w: .3, h: leverLength, depth: .3}, {x: position.x, y: position.y + .1, z: position.z}, `#FF601E`);
-    leverMesh.rotation.x = THREE.Math.degToRad(- 60);
-    leverMesh.geometry.translate(0, leverLength / 2, 0);
+    const leverMesh = box({w: .2, h: 1.25, depth: .2}, {x: position.x, y: position.y + .1, z: position.z}, `#7D643C`);
+    leverMesh.rotation.x = THREE.Math.degToRad(60);
+    leverMesh.geometry.translate(0, leverMesh.geometry.parameters.height / 2, 0);
 
     leverMesh.name = `lever`;
     leverMesh.userData = lever;
@@ -277,26 +276,21 @@ const interactHold = (key, state) => {
   // if interaction is done, do nothing
   if (interaction.done) return;
 
-  switch (key) {
+  interaction.holding++;
+  holdEl.style.width = `${interaction.holding}%`;
 
-  case `r`:
+  if (interaction.holding > 100) {
+    interaction.done = true;
 
-    interaction.holding++;
-    holdEl.style.width = `${interaction.holding}%`;
+    // remove key so event is not shown anymore
+    const lever = findObject(this.scene, interaction.pilarId, `pilarId`);
+    lever.userData.key = ``;
 
-    if (interaction.holding > 100) {
-      interaction.done = true;
+    if (lever.userData.pilarId === 2) toggleTinyChicken(false);
 
-      // remove key so event is not shown anymore
-      const lever = findObject(this.scene, interaction.pilarId, `pilarId`);
-      lever.userData.key = ``;
+    rotateLever();
 
-      if (lever.userData.pilarId === 2) toggleTinyChicken(false);
-
-      rotateLever();
-
-      resetInteraction();
-    }
+    resetInteraction();
   }
 
 };
@@ -320,7 +314,7 @@ const resetInteraction = () => {
 const rotateLever = () => {
   const lever = findObject(this.scene, interaction.pilarId, `pilarId`);
   TweenMax.to(lever.rotation, .5, {
-    x: lever.userData.pulled ? THREE.Math.degToRad(- 60) : THREE.Math.degToRad(- 90),
+    x: lever.userData.pulled ? THREE.Math.degToRad(60) : THREE.Math.degToRad(90),
     onComplete: () => lever.userData.pulled = !lever.userData.pulled
   });
 };
@@ -505,7 +499,7 @@ const createChicken = (font, pos = {x: spawnSize / 2, y: 0, z: spawnSize / 2}) =
   chicken.name = `chicken`;
 
   chicken.position.set(pos.x, pos.y, pos.z);
-  //chicken.rotation.y = randomIntFromInterval(0, Math.PI * 2);
+  chicken.rotation.y = THREE.Math.degToRad(180);
 
   chicken.userData = userData;
   chickens.push(chicken);
@@ -686,10 +680,12 @@ const animate = () => {
   if (keyPressed[`z`]) animateChickenWalk(this.player);
   if (keyPressed[`s`]) animateChickenWalk(this.player, true);
 
+  console.log(interaction);
+
   // custom check if r is constantly down
-  if (keyPressed[`r`]) interactHold(`r`, true);
+  if (keyPressed[interaction.key]) interactHold(interaction.key, true);
   // check if back up
-  if (!keyPressed[`r`]) interactHold(`r`, false);
+  if (!keyPressed[interaction.key]) interactHold(interaction.key, false);
 
   this.controls.update(1);
 

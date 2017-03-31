@@ -3,21 +3,21 @@ export default {
     {
       text: `Pull the lever`,
       hold: false,
-      key: `r`,
+      key: `f`,
       description: `A lever...`,
       action: `Blow up shit`
     },
     {
       text: `Pull the lever`,
       hold: false,
-      key: `r`,
+      key: `f`,
       description: `A lever...`,
       action: `Lower shit`
     },
     {
       text: `Pull the lever`,
       hold: true,
-      key: `r`,
+      key: `f`,
       description: `A lever...`,
       action: `Do some mooorrreeeeee`
     }
