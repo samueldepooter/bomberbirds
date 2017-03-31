@@ -10,6 +10,7 @@ import camera from './settings/camera';
 import interactions from './settings/interactions';
 
 const freeView = false;
+const showLaser = true;
 const mouse = {x: 0, y: 0};
 const keyPressed = [];
 let firstPerson = false;
@@ -24,13 +25,17 @@ let pilarRay;
 let interactionKey, interactionText;
 let interaction = {};
 
+let interactionsEl, holdEl;
+
 const pilars = [];
 
 const init = () => {
 
-  const interactions = document.querySelector(`.interactions`);
-  interactionKey = interactions.childNodes[1];
-  interactionText = interactions.childNodes[3];
+  interactionsEl = document.querySelector(`.interactions`);
+  interactionKey = interactionsEl.childNodes[1];
+  interactionText = interactionsEl.childNodes[3];
+
+  holdEl = document.querySelector(`.hold`);
 
   /* BASICS */
   this.scene = new THREE.Scene();
@@ -214,26 +219,32 @@ const onKeyPress = e => {
 
 const validateInteraction = (key, state = `quick`) => {
 
+  // hold event
   if (state === `hold`) {
 
     if (!interaction.hold) {
       console.log(`Not a hold event!`);
-      return;
+      return false;
     }
 
-  }
+    return true;
 
-  if (isEmpty(interaction)) {
-    console.log(`Nothing to interact with`);
-    return false;
-  }
+  // quick press event
+  } else {
 
-  if (interaction.key !== key) {
-    console.log(`Not the correct key`);
-    return false;
-  }
+    if (isEmpty(interaction)) {
+      console.log(`Nothing to interact with`);
+      return false;
+    }
 
-  return true;
+    if (interaction.key !== key) {
+      console.log(`Not the correct key`);
+      return false;
+
+    }
+    return true;
+
+  }
 };
 
 const interactQuick = key => {
@@ -241,43 +252,69 @@ const interactQuick = key => {
   const check = validateInteraction(key);
   if (!check) return;
 
+  const lever = findObject(this.scene, interaction.pilarId, `pilarId`);
+  console.log(lever.userData);
+
+  if (lever.userData.pilarId === 0) toggleTinyChicken(true);
+  if (lever.userData.pilarId === 1) toggleDay();
+
   rotateLever();
 };
 
 const interactHold = (key, state) => {
 
-  const el = document.querySelector(`.hold`);
-
-  // if hold event stops or interaction is done
-  if (!state || interaction.done) {
-    el.style.width = `0`;
+  // if key is not held anymore -> reset
+  if (!state) {
     interaction.holding = 0;
+    holdEl.style.width = `0`;
     return;
   }
-  el.style.width = `${interaction.holding}%`;
 
-  // if hold event is ongoing
+  // see if it's a hold event
   const check = validateInteraction(key, `hold`);
   if (!check) return;
+
+  // if interaction is done, do nothing
+  if (interaction.done) return;
 
   switch (key) {
 
   case `r`:
 
     interaction.holding++;
+    holdEl.style.width = `${interaction.holding}%`;
 
     if (interaction.holding > 100) {
-      console.log(`done!`);
       interaction.done = true;
 
       // remove key so event is not shown anymore
       const lever = findObject(this.scene, interaction.pilarId, `pilarId`);
       lever.userData.key = ``;
 
+      if (lever.userData.pilarId === 2) toggleTinyChicken(false);
+
       rotateLever();
+
+      resetInteraction();
     }
   }
 
+};
+
+const resetInteraction = () => {
+
+  interaction.holding = 0;
+  holdEl.style.width = `0`;
+
+  TweenMax.to(interactionKey, .5, {
+    y: 60
+  });
+  TweenMax.to(interactionText, .5, {
+    delay: .05,
+    y: 60
+  });
+
+  interaction = {};
 };
 
 const rotateLever = () => {
@@ -285,6 +322,15 @@ const rotateLever = () => {
   TweenMax.to(lever.rotation, .5, {
     x: lever.userData.pulled ? THREE.Math.degToRad(- 60) : THREE.Math.degToRad(- 90),
     onComplete: () => lever.userData.pulled = !lever.userData.pulled
+  });
+};
+
+const toggleTinyChicken = state => {
+  TweenMax.to(this.player.scale, .3, {
+    x: state ? .3 : 1,
+    y: state ? .3 : 1,
+    z: state ? .3 : 1,
+    ease: Power2.easeInOut
   });
 };
 
@@ -305,7 +351,6 @@ const toggleDay = () => {
   // Change eye color
   const eyeColor = new THREE.Color(playground.day.state ? chickenSettings.eye.day : chickenSettings.eye.night);
   chickens.forEach(chicken => {
-    console.log(chicken.children);
     const eyeLeftColor = findObject(chicken.children[0].children[0], `eyeLeft`).material.color;
     TweenMax.to(eyeLeftColor, playground.day.switchDuration, {
       delay: playground.day.state ? 0 : Math.random() * .5 + .1,
@@ -477,6 +522,14 @@ const createChicken = (font, pos = {x: spawnSize / 2, y: 0, z: spawnSize / 2}) =
   head.name = `head`;
   body.add(head);
 
+  if (showLaser) {
+    const laserSize = {w: .02, h: .02, depth: 100};
+    const laser = box(laserSize, {x: 0, y: 0, z: 0}, `#FF331A`);
+    laser.geometry.translate(0, 0, laserSize.depth / 2);
+    laser.name = `laser`;
+    head.add(laser);
+  }
+
   // EYES
   const eyeSize = {w: .1, h: .1, depth: .1};
   const eyeLeft = box(eyeSize, {x: - headSize.w / 2, y: 0, z: 0}, playground.day.state ? chickenSettings.eye.day : chickenSettings.eye.night, `basic`);
@@ -633,7 +686,9 @@ const animate = () => {
   if (keyPressed[`z`]) animateChickenWalk(this.player);
   if (keyPressed[`s`]) animateChickenWalk(this.player, true);
 
+  // custom check if r is constantly down
   if (keyPressed[`r`]) interactHold(`r`, true);
+  // check if back up
   if (!keyPressed[`r`]) interactHold(`r`, false);
 
   this.controls.update(1);
@@ -669,6 +724,9 @@ const checkObjectInteraction = () => {
 
       interaction = intersect[0].object.userData;
 
+      // do nothing if it's already done
+      if (interaction.done) return;
+
       TweenMax.to(interactionKey, .5, {
         y: 0
       });
@@ -678,22 +736,15 @@ const checkObjectInteraction = () => {
       });
 
       interactionKey.textContent = intersect[0].object.userData.key;
-      interactionText.textContent = intersect[0].object.userData.text;
+      interactionText.textContent = intersect[0].object.userData.hold ? `[HOLD] ${intersect[0].object.userData.text}` : intersect[0].object.userData.text;
 
       return;
     }
-
   }
 
-  interaction = {};
+  // reset everything if nothing is happening
+  resetInteraction();
 
-  TweenMax.to(interactionKey, .5, {
-    y: 60
-  });
-  TweenMax.to(interactionText, .5, {
-    delay: .05,
-    y: 60
-  });
 };
 
 const animateChickenFly = (chicken, shadow, delay = Math.random() * 3 + .5) => {

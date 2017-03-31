@@ -15,7 +15,7 @@ export default {
       action: `Lower shit`
     },
     {
-      text: `[HOLD] Pull the lever`,
+      text: `Pull the lever`,
       hold: true,
       key: `r`,
       description: `A lever...`,
